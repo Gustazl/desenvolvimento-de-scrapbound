@@ -27,7 +27,7 @@ export function ScrapboundGame() {
     const saved = continued ? loadSavedState() : undefined
     if (!continued) resetSave()
     stateRef.current = createGameState(saved)
-    if (!continued) stateRef.current.dialogue = { name: 'ABISMO DE FERRO · REGISTRO FRAGMENTADO', lines: ['O mundo já foi verde. Agora só resta o que foi descartado.', 'Séculos de silêncio. Então, uma máquina despertou — e as sucatas aprenderam a sonhar.', 'Caco abre os olhos no alto do Abismo. Não sabe quem o montou. Só sabe que precisa descer.'] }
+    if (!continued) stateRef.current.dialogue = { name: 'ABISMO DE FERRO · REGISTRO FRAGMENTADO', index: 0, lines: ['O mundo já foi verde. Agora só resta o que foi descartado.', 'Séculos de silêncio. Então, uma máquina despertou — e as sucatas aprenderam a sonhar.', 'Caco abre os olhos no alto do Abismo. Não sabe quem o montou. Só sabe que precisa descer.'] }
     switchScreen('playing')
     setHasSave(Boolean(saved))
     if (typeof window !== 'undefined') window.setTimeout(() => canvasRef.current?.focus(), 30)

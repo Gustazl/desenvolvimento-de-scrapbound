@@ -66,8 +66,8 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     if (p.attack <= 0 && p.dash <= 0) { p.attack = 0.24; p.attackId += 1 }
   }
   if (keys.has("space") && p.grounded) { p.vy = -560; p.grounded = false }
-  if (keys.has("shift") && p.dashCooldown <= 0 && p.dash <= 0) { p.dash = 0.18; p.dashCooldown = 0.72; p.vx = p.facing * 610 }
-  if (keys.has("k") && p.energy > 0 && !keys.has("_usedK")) { p.energy -= 1; p.attack = 0.4; p.attackId += 1; keys.add("_usedK") }
+  if (keys.has("shift") && p.dashCooldown <= 0 && p.dash <= 0) { p.dash = 0.18; p.dashCooldown = s.upgrades.includes("dash") ? 0.46 : 0.72; p.vx = p.facing * 610 }
+  if (keys.has("k") && s.bossWon && p.energy > 0 && !keys.has("_usedK")) { p.energy -= 1; p.attack = 0.4; p.attackId += 1; keys.add("_usedK") }
   if (!keys.has("k")) keys.delete("_usedK")
 
   if (p.dash <= 0) {
@@ -102,7 +102,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     if (enemy.kind !== "fly" && enemy.kind !== "spider") enemy.y = GROUND_Y - (enemy.kind === "soldier" ? 40 : 24)
     enemy.x += enemy.vx * dt
     if (p.attack > 0.08 && enemy.hitBy !== p.attackId && Math.abs(enemy.x - (p.x + p.facing * 42)) < 62 && Math.abs(enemy.y - p.y) < 78) {
-      enemy.hitBy = p.attackId; enemy.hp -= 1; enemy.vx = p.facing * 180
+      enemy.hitBy = p.attackId; enemy.hp -= s.upgrades.includes("blade") ? 2 : 1; enemy.vx = p.facing * (s.upgrades.includes("blade") ? 260 : 180)
       if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(3, p.energy + 0.25) }
     }
     if (Math.abs(enemy.x - p.x) < 35 && Math.abs(enemy.y - p.y) < 45 && p.invulnerable <= 0) {
@@ -134,11 +134,12 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
 export function interact(s: GameState) {
   if (s.dialogue) { s.dialogue.index += 1; if (s.dialogue.index >= s.dialogue.lines.length) s.dialogue = null; return }
   const x = s.player.x
-  if (Math.abs(x - 2550) < 115) s.dialogue = { name: "LATA · MECÂNICA", lines: ["Você acordou falando com os parafusos, hein? Isso é bom sinal.", "Tenho peças úteis. Um favor: não pergunte de onde vieram.", "Escolha uma melhoria na bancada ao lado. E cuidado com o Ferreiro."] , shop: true }
-  else if (Math.abs(x - 2920) < 130) s.dialogue = { name: "FERRÃO · DESMONTADOS", lines: ["O Ferreiro chama silêncio de paz. Eu chamo de ferrugem por dentro.", "Há algo vivo além destas paredes. Os velhos sabem — e escondem.", "Quando chegar à Fornalha, olhe para o que ele protege. Não para o que ele diz."] }
-  else if (Math.abs(x - 3760) < 150 && s.foundGreen) s.dialogue = { name: "O JARDINEIRO", lines: ["Não toque na flor. Ela levou séculos para confiar no escuro.", "O mundo não morreu, pequeno Caco. Só aprendeu a se esconder.", "Este brilho no seu peito... conheço o desenho. Mas não o nome."] }
-  else if (Math.abs(x - 5480) < 180 && s.bossWon) s.dialogue = { name: "O FERREIRO", lines: ["Esse pulso... eu o enterrei antes de você nascer.", "Você não foi montado aqui, Caco. Foi devolvido.", "A Fornalha guarda a primeira lembrança. E a última mentira."] }
-  else if (Math.abs(x - s.checkpoint) < 80) { s.player.hp = s.player.maxHp; s.player.energy = 3; setToast(s, "Marco restaurado: vida e energia recuperadas.") }
+  if (s.checkpoint > 0 && Math.abs(x - s.checkpoint) < 42) { s.player.hp = s.player.maxHp; s.player.energy = s.upgrades.includes("core") ? 4 : 3; setToast(s, "Marco restaurado: vida e energia recuperadas.") }
+  else if (Math.abs(x - 2550) < 115) s.dialogue = { name: "LATA · MECÂNICA", index: 0, lines: ["Você acordou falando com os parafusos, hein? Isso é bom sinal.", "Tenho peças úteis. Um favor: não pergunte de onde vieram.", "Escolha uma melhoria na bancada ao lado. E cuidado com o Ferreiro."] , shop: true }
+  else if (Math.abs(x - 2920) < 130) s.dialogue = { name: "FERRÃO · DESMONTADOS", index: 0, lines: ["O Ferreiro chama silêncio de paz. Eu chamo de ferrugem por dentro.", "Há algo vivo além destas paredes. Os velhos sabem — e escondem.", "Quando chegar à Fornalha, olhe para o que ele protege. Não para o que ele diz."] }
+  else if (Math.abs(x - 3760) < 150 && s.foundGreen) s.dialogue = { name: "O JARDINEIRO", index: 0, lines: ["Não toque na flor. Ela levou séculos para confiar no escuro.", "O mundo não morreu, pequeno Caco. Só aprendeu a se esconder.", "Este brilho no seu peito... conheço o desenho. Mas não o nome."] }
+  else if (Math.abs(x - 5480) < 180 && s.bossWon) s.dialogue = { name: "O FERREIRO", index: 0, lines: ["Esse pulso... eu o enterrei antes de você nascer.", "Você não foi montado aqui, Caco. Foi devolvido.", "A Fornalha guarda a primeira lembrança. E a última mentira."] }
+  else if (s.checkpoint > 0 && Math.abs(x - s.checkpoint) < 80) { s.player.hp = s.player.maxHp; s.player.energy = s.upgrades.includes("core") ? 4 : 3; setToast(s, "Marco restaurado: vida e energia recuperadas.") }
   else setToast(s, "Só o vento passando pelos canos.")
 }
 
