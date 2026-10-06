@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { ArrowLeft, ArrowRight, ArrowUp, AudioLines, BookOpen, Check, ChevronRight, CircleHelp, Coins, Heart, Keyboard, Map, Play, RotateCcw, Shield, Sparkles, X, Zap } from "lucide-react"
-import { AREAS, VIEW_HEIGHT, VIEW_WIDTH, buyUpgrade, createGameState, drawGame, getArea, interact, loadSavedState, persistState, resetSave, tickGame, upgradeInfo, type GameState } from "./game-engine"
+import { AREAS, VIEW_HEIGHT, VIEW_WIDTH, WORLD_WIDTH, buyUpgrade, createGameState, drawGame, getArea, interact, loadSavedState, persistState, resetSave, tickGame, upgradeInfo, type GameState } from "./game-engine"
 
 const keysFor = { a: "ESQUERDA", d: "DIREITA", space: "PULAR", shift: "DASH", j: "ATACAR", k: "PULSO", e: "INTERAGIR", i: "INVENTÁRIO", m: "MAPA", escape: "PAUSAR" }
-type Screen = "title" | "playing" | "pause" | "inventory" | "map" | "death" | "intro"
+type Screen = "title" | "playing" | "pause" | "inventory" | "map" | "death" | "intro" | "ending"
 type Panel = "itens" | "habilidades" | "diário"
 
 export default function ScrapboundGame() {
@@ -17,6 +17,7 @@ export default function ScrapboundGame() {
   const lastUiRef = useRef(0)
   const screenRef = useRef<Screen>("title")
   const [screen, setScreen] = useState<Screen>("title")
+  const [hasSave, setHasSave] = useState(false)
   const [panel, setPanel] = useState<Panel>("itens")
   const [revision, setRevision] = useState(0)
   const [sound, setSound] = useState(false)
@@ -26,9 +27,12 @@ export default function ScrapboundGame() {
   const world = gameRef.current
 
   const changeScreen = useCallback((next: Screen) => { screenRef.current = next; setScreen(next) }, [])
+  useEffect(() => { setHasSave(Boolean(loadSavedState())) }, [])
   const start = useCallback((fresh = false) => {
     if (fresh) resetSave()
-    const state = createGameState(fresh ? undefined : loadSavedState())
+    const saved = fresh ? undefined : loadSavedState()
+    setHasSave(Boolean(saved))
+    const state = createGameState(saved)
     gameRef.current = state
     changeScreen("intro")
     setRevision((value) => value + 1)
@@ -62,13 +66,13 @@ export default function ScrapboundGame() {
       const audio = audioRef.current ?? new AudioContextClass()
       audioRef.current = audio
       if (audio.state === "suspended") void audio.resume()
-      const greenDiscovered = Boolean(gameRef.current?.foundGreen)
+      const greenDiscovered = Boolean(gameRef.current?.forestEntered)
       const bed = audio.createGain()
       const low = audio.createOscillator()
       const upper = audio.createOscillator()
       const filter = audio.createBiquadFilter()
       filter.type = "lowpass"
-      filter.frequency.value = greenDiscovered ? 520 : 180
+      filter.frequency.value = greenDiscovered ? 1100 : 180
       bed.gain.setValueAtTime(.0001, audio.currentTime)
       bed.gain.exponentialRampToValueAtTime(.012, audio.currentTime + 1.4)
       low.type = "sine"
@@ -84,7 +88,7 @@ export default function ScrapboundGame() {
         low.stop(now + .7); upper.stop(now + .7)
       }
     } catch { /* a paisagem sonora depende do suporte de áudio do navegador */ }
-  }, [screen, sound, world?.foundGreen])
+  }, [screen, sound, world?.forestEntered])
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
@@ -138,7 +142,8 @@ export default function ScrapboundGame() {
         if (screenRef.current === "playing" && !state.dialogue) {
           if (run) keysRef.current.add("_run"); else keysRef.current.delete("_run")
           tickGame(state, keysRef.current, dt)
-          if (now - lastSaveRef.current > 7000 || (state.savePulse > 0 && now - lastSaveRef.current > 1000)) { persistState(state); lastSaveRef.current = now }
+          if (state.projectRevealed && screenRef.current === "playing") { persistState(state); changeScreen("ending") }
+          if (now - lastSaveRef.current > 7000 || (state.savePulse > 0 && now - lastSaveRef.current > 1000)) { persistState(state); setHasSave(true); lastSaveRef.current = now }
         }
         drawGame(ctx, state, VIEW_WIDTH, VIEW_HEIGHT)
         if (now - lastUiRef.current > 100) { setRevision((value) => value + 1); lastUiRef.current = now }
@@ -149,7 +154,7 @@ export default function ScrapboundGame() {
     }
     frame = window.requestAnimationFrame(loop)
     return () => window.cancelAnimationFrame(frame)
-  }, [run])
+  }, [run, changeScreen])
 
   const handleAction = (action: string, value?: string) => {
     const state = gameRef.current
@@ -193,12 +198,12 @@ export default function ScrapboundGame() {
             </div>
             <div className="hud-energy" aria-label={`${world.player.energy} cargas de energia`}><span className="hud-label">NÚCLEO</span>{Array.from({ length: world.upgrades.includes("core") ? 4 : 3 }, (_, i) => <i key={i} className={i < Math.floor(world.player.energy) ? "charged" : ""} />)}</div>
             <div className="hud-location"><span className="location-rule" /><span>{getArea(world.player.x).name.toUpperCase()}</span><span className="location-rule" /></div>
-            <div className="hud-compass"><span>N</span><div className="compass-track"><i style={{ left: `${Math.max(1, Math.min(98, (world.player.x / 5900) * 100))}%` }} /></div><span>ABISMO</span><button onClick={toggleMobileMap} aria-label="Abrir mapa"><Map size={14} /></button></div>
+            <div className="hud-compass"><span>N</span><div className="compass-track"><i style={{ left: `${Math.max(1, Math.min(98, (world.player.x / WORLD_WIDTH) * 100))}%` }} /></div><span>ABISMO</span><button onClick={toggleMobileMap} aria-label="Abrir mapa"><Map size={14} /></button></div>
             {world.toastTimer > 0 && <div className="game-toast" role="status"><Sparkles size={14} />{world.toast}</div>}
             {world.dialogue && <div className="dialogue-box"><div className="dialogue-name">{world.dialogue.name}</div><p>{world.dialogue.lines[Math.min(world.dialogue.index, world.dialogue.lines.length - 1)]}</p>{world.dialogue.shop && <div className="dialogue-shop">{upgradeInfo.map((upgrade) => <button key={upgrade.id} onClick={() => handleAction("buy", upgrade.id)} disabled={world.upgrades.includes(upgrade.id) || world.player.screws < upgrade.cost}><span>{upgrade.name}</span><small>{world.upgrades.includes(upgrade.id) ? "INSTALADA" : `${upgrade.cost} PARAFUSOS`}</small></button>)}</div>}<button className="dialogue-continue" onClick={() => handleAction("dialogue-next")}>CONTINUAR <ChevronRight size={14} /></button></div>}
           </>}
 
-          {screen === "title" && <div className="screen-overlay title-overlay"><div className="title-grain" /><div className="title-content"><div className="title-eyebrow"><span /> ARQUIVO DE EXPLORAÇÃO Nº 001 <span /></div><h1>SCRAP<span>BOUND</span></h1><p className="title-subtitle">A REVOLUÇÃO DAS SUCATAS</p><div className="title-divider"><i /><span>✳</span><i /></div><p className="title-quote">“O mundo não acabou.<br />Só aprendeu a se esconder.”</p><div className="title-buttons"><button className="button-primary" onClick={() => handleAction("continue")}><Play size={15} fill="currentColor" /> CONTINUAR JORNADA</button><button className="button-secondary" onClick={() => handleAction("new")}><RotateCcw size={15} /> NOVA JORNADA</button></div><button className="text-action" onClick={() => handleAction("toggle-controls")}><CircleHelp size={14} /> COMO JOGAR</button>{showControls && <Controls onClose={() => setShowControls(false)} />}</div><span className="title-coordinate">ABISMO DE FERRO · COORD. 00:00:01</span><span className="title-version">ARQUIVO LOCAL {loadSavedState() ? "· PROGRESSO ENCONTRADO" : "· SEM REGISTRO"}</span></div>}
+          {screen === "title" && <div className="screen-overlay title-overlay"><div className="title-grain" /><div className="title-content"><div className="title-eyebrow"><span /> ARQUIVO DE EXPLORAÇÃO Nº 001 <span /></div><h1>SCRAP<span>BOUND</span></h1><p className="title-subtitle">A REVOLUÇÃO DAS SUCATAS</p><div className="title-divider"><i /><span>✳</span><i /></div><p className="title-quote">“O mundo não acabou.<br />Só aprendeu a se esconder.”</p><div className="title-buttons"><button className="button-primary" onClick={() => handleAction("continue")}><Play size={15} fill="currentColor" /> CONTINUAR JORNADA</button><button className="button-secondary" onClick={() => handleAction("new")}><RotateCcw size={15} /> NOVA JORNADA</button></div><button className="text-action" onClick={() => handleAction("toggle-controls")}><CircleHelp size={14} /> COMO JOGAR</button>{showControls && <Controls onClose={() => setShowControls(false)} />}</div><span className="title-coordinate">ABISMO DE FERRO · COORD. 00:00:01</span><span className="title-version">ARQUIVO LOCAL {hasSave ? "· PROGRESSO ENCONTRADO" : "· SEM REGISTRO"}</span></div>}
 
           {screen === "intro" && <div className="screen-overlay intro-overlay"><div className="intro-card"><span className="chapter-index">PRÓLOGO · UM SOM SOB A SUCATA</span><h2>O silêncio<br />também enferruja.</h2><div className="intro-copy"><p>Por séculos, o Abismo de Ferro dormiu sob o peso do que o mundo descartou.</p><p>Então, uma máquina antiga despertou. A sucata aprendeu a respirar. E o Ferreiro ensinou todos a não olhar para cima.</p><p>Em algum lugar sob uma montanha de metal, uma pequena criatura abriu o único olho.</p></div><div className="intro-footer"><span>VOCÊ É CACO. POR ENQUANTO, ISSO BASTA.</span><button className="button-primary" onClick={() => handleAction("enter")}>ACORDAR <ChevronRight size={15} /></button></div></div></div>}
 
@@ -206,12 +211,14 @@ export default function ScrapboundGame() {
 
           {screen === "inventory" && world && <OverlayCard eyebrow="PERTENCES DE CACO" title="O que restou." onClose={() => handleAction("resume")}><div className="inventory-tabs">{(["itens", "habilidades", "diário"] as Panel[]).map((tab) => <button key={tab} className={panel === tab ? "active" : ""} onClick={() => setPanel(tab)}>{tab === "itens" ? "ITENS" : tab === "habilidades" ? "HABILIDADES" : "DIÁRIO"}</button>)}</div>{panel === "itens" && <div className="inventory-content"><div className="equipment-card"><div className="item-icon">⌁</div><div><span className="item-category">ARMA · EQUIPADA</span><strong>Lâmina improvisada</strong><small>Uma peça de metal que ainda sabe cortar.</small></div><Check size={14} /></div>{upgradeInfo.map((item) => <div className="equipment-card" key={item.id}><div className="item-icon muted">{item.id === "shell" ? "⬡" : item.id === "dash" ? "↗" : item.id === "core" ? "◉" : "⌁"}</div><div><span className="item-category">MELHORIA · {world.upgrades.includes(item.id) ? "INSTALADA" : "DISPONÍVEL NA LATA"}</span><strong>{item.name}</strong><small>{item.detail}</small></div>{world.upgrades.includes(item.id) && <Check size={14} />}</div>)}<div className="inventory-stats"><span><Heart size={14} /> {world.player.hp}/{world.player.maxHp} INTEGRIDADE</span><span><Zap size={14} /> {world.player.energy} CARGAS</span><span><Coins size={14} /> {world.player.screws} PARAFUSOS</span></div></div>}{panel === "habilidades" && <div className="inventory-content ability-content"><div className="equipment-card"><div className="item-icon">⌁</div><div><span className="item-category">COMBATE · DISPONÍVEL</span><strong>Lâmina de sucata</strong><small>Golpe corpo a corpo. J ou clique esquerdo.</small></div><Check size={14} /></div><div className="equipment-card"><div className="item-icon">↗</div><div><span className="item-category">MOVIMENTO · DISPONÍVEL</span><strong>Propulsor improvisado</strong><small>Investida rápida e invulnerável. Shift.</small></div><Check size={14} /></div><div className="equipment-card"><div className="item-icon muted">✳</div><div><span className="item-category">HABILIDADE · {world.bossWon ? "DESBLOQUEADA" : "BLOQUEADA"}</span><strong>Pulso de Sucata</strong><small>{world.bossWon ? "Uma onda de energia. K para usar; consome 1 núcleo." : "O Colosso da Fornalha guarda esta habilidade."}</small></div>{world.bossWon && <Check size={14} />}</div></div>}{panel === "diário" && <div className="journal-content"><BookOpen size={22} /><span>FRAGMENTO DE MEMÓRIA · 001</span><p>“O Ferreiro acordou antes de nós. Ele diz que lá fora só existe silêncio. Mas por que, então, suas máquinas continuam apontadas para o céu?”</p><small>{world.foundGreen ? "NOVA ANOTAÇÃO · Uma flor cresce no metal. Ela não devia estar aqui." : "Continue explorando para encontrar novas lembranças."}</small></div>}</OverlayCard>}
 
-          {screen === "map" && world && <OverlayCard eyebrow="CARTOGRAFIA DE CAMPO" title="O Abismo de Ferro." onClose={() => handleAction("resume")}><div className="map-legend"><span><i className="map-dot player-dot" /> VOCÊ</span><span><i className="map-dot" /> MARCO</span><span><i className="map-dot secret-dot" /> VIDA DETECTADA</span></div><div className="world-map"><div className="map-route">{AREAS.map((area, index) => <div key={area.name} className={`map-region ${world.player.x >= area.start && world.player.x < area.end ? "current" : world.player.x >= area.start ? "discovered" : "unknown"}`}><span className="region-index">0{index + 1}</span><strong>{area.name}</strong><div className="region-content"><span className="map-feature"><i className="map-dot player-dot" style={{ display: world.player.x >= area.start && world.player.x < area.end ? "block" : "none" }} />{index === 0 ? "Montanhas de sucata" : index === 1 ? "Galerias subterrâneas" : index === 2 ? "Refúgio e oficina" : index === 3 ? world.foundGreen ? "● Vida detectada" : "Terreno instável" : world.bossWon ? "Forja atravessável" : "Sinal hostil"}</span>{world.checkpoint >= area.start && index >= 2 && <span className="map-feature"><i className="map-dot" /> Marco de Sucata</span>}</div></div>)}</div><div className="map-you" style={{ left: `${Math.max(5, Math.min(94, (world.player.x / 5900) * 100))}%` }}><span>VOCÊ ESTÁ AQUI</span><i /></div></div><p className="map-tip"><Map size={14} /> As áreas se revelam conforme você as alcança. Procure passagens no alto e sinais de vida abaixo.</p></OverlayCard>}
+          {screen === "map" && world && <OverlayCard eyebrow="CARTOGRAFIA DE CAMPO" title="O Abismo de Ferro." onClose={() => handleAction("resume")}><div className="map-legend"><span><i className="map-dot player-dot" /> VOCÊ</span><span><i className="map-dot" /> MARCO</span><span><i className="map-dot secret-dot" /> SEGREDO</span></div><div className="world-map"><div className="map-route">{AREAS.map((area, index) => <div key={area.name} className={`map-region ${world.player.x >= area.start && world.player.x < area.end ? "current" : world.player.x >= area.start ? "discovered" : "unknown"}`}><span className="region-index">0{index + 1}</span><strong>{area.name}</strong><div className="region-content"><span className="map-feature"><i className="map-dot player-dot" style={{ display: world.player.x >= area.start && world.player.x < area.end ? "block" : "none" }} />{index === 0 ? "Entrada do Abismo" : index === 1 ? "Galerias e vapor" : index === 2 ? "Lata · vila e abrigo" : index === 3 ? "Trilhos e cemitério" : index === 4 ? world.bossWon ? "Fornalha atravessável" : "Sinal hostil" : index === 5 ? world.secretFound ? "Memória encontrada" : "Jardim silencioso" : index === 6 ? world.flowerBloomed ? "Flor no braço de Caco" : "Vento entre as árvores" : world.projectRevealed ? "Registro recuperado" : "Ruínas humanas"}</span>{world.checkpoint >= area.start && index >= 2 && <span className="map-feature"><i className="map-dot" /> Marco de Sucata</span>}</div></div>)}</div><div className="map-you" style={{ left: `${Math.max(5, Math.min(94, (world.player.x / WORLD_WIDTH) * 100))}%` }}><span>VOCÊ ESTÁ AQUI</span><i /></div></div><p className="map-tip"><Map size={14} /> As áreas se revelam conforme você as alcança. Procure passagens no alto e sinais de vida abaixo.</p></OverlayCard>}
 
           {screen === "death" && <div className="screen-overlay"><OverlayCard eyebrow="SINAL PERDIDO" title="A sucata lembra." onClose={() => start(false)}><p className="death-copy">Caco será remontado no último Marco de Sucata.</p><button className="button-primary full-button" onClick={() => start(false)}><RotateCcw size={15} /> VOLTAR AO MARCO</button></OverlayCard></div>}
 
+          {screen === "ending" && <div className="screen-overlay ending-overlay"><section className="ending-card"><span className="chapter-index">REGISTRO HUMANO RECUPERADO · 01/01</span><div className="terminal-orbit"><span /><i /><b /></div><p className="ending-ecology">ÁREA DE RECUPERAÇÃO ECOLÓGICA</p><h2>PROJETO<br /><strong>SCRAPBOUND</strong></h2><div className="ending-status">STATUS: <b>ATIVO</b></div><p className="ending-copy">Na tela, uma silhueta de metal familiar. A floresta respira ao redor de Caco. Nenhuma resposta — apenas outra pergunta.</p><button className="button-secondary" onClick={() => changeScreen("title")}>FIM DA PRIMEIRA DEMO · VOLTAR</button></section></div>}
+
           {screen === "playing" && <>
-            <div className="boss-hud" style={{ opacity: world && world.player.x > 5000 && !world.bossWon ? 1 : 0 }}><div className="boss-name"><span>AMEAÇA DE NÍVEL INDUSTRIAL</span><strong>O COLOSSO DA FORNALHA</strong></div><div className="boss-health"><span style={{ width: `${world ? Math.max(0, (world.boss.hp / world.boss.maxHp) * 100) : 0}%` }} /></div><small>{world?.boss.attack === "slam" ? "PANCADA NO CHÃO" : world?.boss.attack === "charge" ? "INVESTIDA HORIZONTAL" : "CHUVA DE FRAGMENTOS"}</small></div>
+            <div className="boss-hud" style={{ opacity: world && world.player.x > 5000 && !world.bossWon ? 1 : 0 }}><div className="boss-name"><span>{world?.boss.secondPhase ? "FASE II · NÚCLEO EXPOSTO" : "AMEAÇA DE NÍVEL INDUSTRIAL"}</span><strong>O COLOSSO DA FORNALHA</strong></div><div className="boss-health"><span style={{ width: `${world ? Math.max(0, (world.boss.hp / world.boss.maxHp) * 100) : 0}%` }} /></div><small>{world?.boss.attack === "slam" ? "PANCADA NO CHÃO" : world?.boss.attack === "charge" ? "INVESTIDA HORIZONTAL" : "CHUVA DE FRAGMENTOS"}</small></div>
             {showControls && <Controls onClose={() => setShowControls(false)} />}
           </>}
         </section>
