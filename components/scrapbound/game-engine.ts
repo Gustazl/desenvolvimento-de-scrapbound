@@ -7,6 +7,7 @@ export type GameState = {
   player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; attackDirection: AttackDirection; attackPhase: "idle" | "start" | "active" | "recovery"; comboStep: number; comboWindow: number; attackBuffer: number; jumpBuffer: number; coyoteTime: number; dash: number; dashCooldown: number; invulnerable: number; hurtFlash: number; pulseCooldown: number; pulseEffect: number; pogoCooldown: number }
   enemies: Enemy[]; unlockedModules: string[]; equippedModules: string[]; moduleSlots: number; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean }
   deathTimer: number; camera: number; cameraZoom: number; time: number; hitStop: number; cameraShake: number; particles: HitParticle[]; checkpoint: number; foundGreen: boolean; forestEntered: boolean; forestMoment: number; flowerBloomed: boolean; projectRevealed: boolean; secretFound: boolean; wallBroken: boolean; shortcut: boolean; bossWon: boolean; ferronMet: boolean; upgrades: string[]; dialogue: Dialogue | null; toast: string; toastTimer: number; savePulse: number
+  layer: "surface" | "underworks"; cameraY: number; lowerWallHits: number; lowerWallHitBy: number; lowerWallBroken: boolean; relayActivated: boolean; tunnelMemoryFound: boolean; discoveredRooms: string[]
 }
 
 export const WORLD_WIDTH = 9200
@@ -55,9 +56,10 @@ export function createGameState(saved?: Partial<GameState>): GameState {
     ],
     boss: { hp: 18, maxHp: 18, x: 5480, phase: 0, timer: 1.4, attack: "slam", alive: true, hitBy: -1, secondPhase: false },
     deathTimer: 0, camera: 0, cameraZoom: 1, time: 0, hitStop: 0, cameraShake: 0, particles: [], checkpoint: 0, foundGreen: false, forestEntered: false, forestMoment: 0, flowerBloomed: false, projectRevealed: false, secretFound: false, wallBroken: false, shortcut: false, bossWon: false, ferronMet: false, upgrades: [], dialogue: null, toast: "", toastTimer: 0, savePulse: 0,
+    layer: "surface", cameraY: 0, lowerWallHits: 0, lowerWallHitBy: -1, lowerWallBroken: false, relayActivated: false, tunnelMemoryFound: false, discoveredRooms: ["area:0"],
   }
   if (!saved) return base
-  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, particles: Array.isArray(saved.particles) ? saved.particles : [], unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, boss: { ...base.boss, ...saved.boss } }
+  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, particles: Array.isArray(saved.particles) ? saved.particles : [], discoveredRooms: Array.isArray(saved.discoveredRooms) ? saved.discoveredRooms : ["area:0"], layer: saved.layer === "underworks" ? "underworks" : "surface", lowerWallHits: saved.lowerWallHits ?? 0, lowerWallHitBy: saved.lowerWallHitBy ?? -1, lowerWallBroken: saved.lowerWallBroken ?? false, relayActivated: saved.relayActivated ?? false, tunnelMemoryFound: saved.tunnelMemoryFound ?? false, unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, boss: { ...base.boss, ...saved.boss } }
 }
 
 export function getArea(x: number) { return AREAS.find((area) => x >= area.start && x < area.end) ?? AREAS[AREAS.length - 1] }
@@ -143,14 +145,19 @@ function usePulse(s: GameState) {
     s.boss.hitBy = -1
     addSparks(s, s.boss.x, GROUND_Y - 100, true)
   }
-  if (!s.wallBroken && p.x > 5960 && p.x < 6250) {
+  if (s.layer === "underworks" && s.lowerWallBroken && p.x > 1910 && p.x < 2040 && !s.relayActivated) {
+    s.relayActivated = true
+    if (!s.discoveredRooms.includes("relay-hatch")) s.discoveredRooms.push("relay-hatch")
+    setToast(s, "O Pulso acorda a máquina. Um elevador distante responde sob a Vila dos Pregos.")
+    s.savePulse = 2
+  } else if (!s.wallBroken && p.x > 5960 && p.x < 6250) {
     s.wallBroken = true
     s.secretFound = true
     unlockModules(s, ["magnetico", "eco"])
     p.screws += 8
     setToast(s, "O Pulso rompe a parede. Uma oficina escondida — e uma memória sem assinatura.")
     s.savePulse = 2
-  } else setToast(s, "Pulso liberado. A sucata vibra ao redor de Caco.")
+  } else if (!(s.layer === "underworks" && s.lowerWallBroken && p.x > 1910 && p.x < 2040)) setToast(s, "Pulso liberado. A sucata vibra ao redor de Caco.")
   if (s.equippedModules.includes("raiz") && s.foundGreen && p.x > 6200 && p.x < 6900 && !s.flowerBloomed) {
     s.flowerBloomed = true
     if (s.toast !== "O Pulso rompe a parede. Uma oficina escondida — e uma memória sem assinatura.") setToast(s, "O Núcleo desperta a raiz adormecida. Uma flor floresce no braço de Caco.")
@@ -160,6 +167,7 @@ function usePulse(s: GameState) {
 
 export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   if (!Array.isArray(s.particles)) s.particles = []
+  if (!Array.isArray(s.discoveredRooms)) s.discoveredRooms = ["area:0"]
   const p = s.player
   s.time += dt
   s.toastTimer = Math.max(0, s.toastTimer - dt)
@@ -176,7 +184,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   })
   const wasDying = s.deathTimer > 0
   s.deathTimer = Math.max(0, s.deathTimer - dt)
-  if (wasDying && s.deathTimer === 0) { p.hp = p.maxHp; p.x = s.checkpoint || 120; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.4; p.hurtFlash = 0; setToast(s, "Caco foi remontado no último Marco."); s.savePulse = 2 }
+  if (wasDying && s.deathTimer === 0) { const fellFromUnderworks = s.layer === "underworks"; p.hp = p.maxHp; p.x = fellFromUnderworks ? 1515 : s.checkpoint || 120; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.4; p.hurtFlash = 0; if (fellFromUnderworks) { s.layer = "surface"; s.cameraY = 0 }; setToast(s, fellFromUnderworks ? "Caco foi remontado na escada de serviço dos Túneis." : "Caco foi remontado no último Marco."); s.savePulse = 2 }
   if (s.hitStop > 0) return
   s.cameraZoom += ((s.forestMoment > 0 ? .78 : 1) - s.cameraZoom) * Math.min(1, dt * 1.1)
   p.invulnerable = Math.max(0, p.invulnerable - dt)
@@ -222,26 +230,44 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   }
   const oldY = p.y
   p.x = Math.max(0, Math.min(WORLD_WIDTH - 35, p.x + p.vx * dt))
-  if (!s.wallBroken && p.x > 6108 && p.x < 6182) { p.x = 6108; p.vx = 0 }
+  if (s.layer === "underworks") {
+    p.x = Math.max(1270, Math.min(2110, p.x))
+    if (!s.lowerWallBroken && p.x > 1810 && p.x < 1870) { p.x = 1810; p.vx = 0 }
+  } else if (!s.wallBroken && p.x > 6108 && p.x < 6182) { p.x = 6108; p.vx = 0 }
   p.y += p.vy * dt
   p.grounded = false
-  if (p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
-  for (const platform of PLATFORMS) {
+  const shaftOpen = s.layer === "surface" && p.x > 1465 && p.x < 1565
+  if (!shaftOpen && p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
+  if (s.layer === "surface") for (const platform of PLATFORMS) {
     if (p.vy >= 0 && p.x + 28 > platform.x && p.x + 8 < platform.x + platform.w && oldY + 42 <= platform.y + 8 && p.y + 42 >= platform.y) {
       p.y = platform.y - 42; p.vy = 0; p.grounded = true
     }
   }
+  if (shaftOpen && p.y > GROUND_Y + 245) {
+    s.layer = "underworks"; s.cameraY = 0; p.x = 1515; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.grounded = true; s.camera = p.x - VIEW_WIDTH * .42
+    if (!s.discoveredRooms.includes("underworks")) s.discoveredRooms.push("underworks")
+    setToast(s, "O chão cede sob as placas. Túneis de Ferrugem — camada inferior."); s.savePulse = 2
+  }
+  if (s.layer === "underworks" && p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
   p.pogoCooldown = Math.max(0, p.pogoCooldown - dt)
   if (p.jumpBuffer > 0 && (p.grounded || p.coyoteTime > 0) && !scripted) {
     p.sitting = false; p.vy = -560; p.grounded = false; p.coyoteTime = 0; p.jumpBuffer = 0
   }
   if (p.y > VIEW_HEIGHT + 400 && s.deathTimer <= 0) { p.hp = 0; s.deathTimer = .78; p.y = GROUND_Y - 42; p.vy = -180; p.vx = 0; p.screws = Math.max(0, p.screws - 5); setToast(s, "As peças de Caco se soltam. O Marco ainda lembra.") }
 
+  if (s.layer === "surface") {
+    const areaIndex = AREAS.findIndex((area) => p.x >= area.start && p.x < area.end)
+    const roomId = `area:${Math.max(0, areaIndex)}`
+    if (!s.discoveredRooms.includes(roomId)) s.discoveredRooms.push(roomId)
+    if (areaIndex === 1 && p.y < 330 && !s.discoveredRooms.includes("upper-gallery")) s.discoveredRooms.push("upper-gallery")
+  }
   const targetCamera = Math.max(0, Math.min(WORLD_WIDTH - VIEW_WIDTH, p.x - VIEW_WIDTH * 0.42))
+  const targetCameraY = s.layer === "surface" ? Math.max(0, Math.min(230, p.y - GROUND_Y + 84)) : 0
+  s.cameraY += (targetCameraY - s.cameraY) * Math.min(1, dt * 5)
   s.camera += (targetCamera - s.camera) * Math.min(1, dt * 5)
 
   for (const enemy of s.enemies) {
-    if (scripted || !enemy.alive) continue
+    if ((s.layer === "underworks" && enemy.id !== 3) || scripted || !enemy.alive) continue
     enemy.phase += dt
     enemy.hurtTimer = Math.max(0, (enemy.hurtTimer ?? 0) - dt)
     enemy.hitFlash = Math.max(0, (enemy.hitFlash ?? 0) - dt)
@@ -286,8 +312,13 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   }
 
   if (p.attackPhase === "active" && p.attackDirection === "right" && !s.wallBroken && p.x > 6040 && p.x < 6170) { s.wallBroken = true; s.secretFound = true; unlockModules(s, ["magnetico", "eco"]); p.screws += 8; setToast(s, "A parede cede. Uma oficina escondida — e uma memória sem assinatura."); s.savePulse = 2 }
+  if (s.layer === "underworks" && p.attackPhase === "active" && !s.lowerWallBroken && s.lowerWallHitBy !== p.attackId && isInsideAttack(p, 1850, GROUND_Y - 30)) {
+    s.lowerWallHitBy = p.attackId; s.lowerWallHits += 1; s.cameraShake = Math.max(s.cameraShake, 2.1); addSparks(s, 1838, GROUND_Y - 26, s.lowerWallHits >= 3)
+    if (s.lowerWallHits >= 3) { s.lowerWallBroken = true; if (!s.discoveredRooms.includes("memory-niche")) s.discoveredRooms.push("memory-niche"); setToast(s, "A chapa cede. Do outro lado, uma máquina ainda guarda energia."); s.savePulse = 2 }
+    else setToast(s, `A chapa vibra. ${3 - s.lowerWallHits} impactos ainda podem abrir a passagem.`)
+  }
 
-  if (!s.bossWon && p.x > 5110 && !scripted) {
+  if (s.layer === "surface" && !s.bossWon && p.x > 5110 && !scripted) {
     const b = s.boss
     b.timer -= dt; b.phase += dt
     if (!b.secondPhase && b.hp <= b.maxHp / 2) { b.secondPhase = true; setToast(s, "O núcleo vermelho se abre. A Fornalha ainda não terminou."); s.savePulse = 2 }
@@ -325,6 +356,13 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
 export function interact(s: GameState) {
   if (s.dialogue) { s.dialogue.index += 1; if (s.dialogue.index >= s.dialogue.lines.length) s.dialogue = null; return }
   const x = s.player.x
+  if (s.layer === "underworks") {
+    if (Math.abs(x - 1515) < 95) { s.layer = "surface"; s.player.x = 1500; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; setToast(s, "A escada de serviço devolve Caco à superfície."); s.savePulse = 2; return }
+    if (s.lowerWallBroken && Math.abs(x - 1885) < 38 && !s.tunnelMemoryFound) { s.tunnelMemoryFound = true; s.player.screws += 6; setToast(s, "Memória recuperada: alguém marcou a descida antes de a soterrar."); s.savePulse = 2; return }
+    if (s.lowerWallBroken && Math.abs(x - 1975) < 55) { setToast(s, s.bossWon ? "O painel aguarda um Pulso do Núcleo. Pressione K junto à máquina." : "A máquina antiga reconhece uma frequência que Caco ainda não possui."); return }
+    if (s.relayActivated && Math.abs(x - 2060) < 68) { s.layer = "surface"; s.player.x = 4400; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; s.camera = 4400 - VIEW_WIDTH * .42; if (!s.discoveredRooms.includes("area:3")) s.discoveredRooms.push("area:3"); setToast(s, "O elevador emerge no Cemitério de Motores. A passagem agora conecta regiões."); s.savePulse = 2; return }
+    setToast(s, "O som da água some atrás da chapa."); return
+  }
   if (s.forestEntered && x > 8470 && x < 8770) { s.projectRevealed = true; s.savePulse = 2; return }
   if (Math.abs(x - 4400) < 95) {
     if (!s.shortcut) { s.shortcut = true; setToast(s, "Elevador reativado. Atalho aberto até a Vila dos Pregos."); s.savePulse = 2 }
@@ -411,16 +449,27 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
       for (let i = 0; i < 12; i++) { const x = (i * 97 - cam * .53) % VIEW_WIDTH; ctx.strokeStyle = "rgba(188,214,152,.48)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x, 115 + i % 4 * 28); ctx.quadraticCurveTo(x + 12, 150 + i % 4 * 35, x + Math.sin(s.time + i) * 10, 190 + i % 4 * 36); ctx.stroke() }
     }
   }
+  ctx.save()
+  ctx.translate(0, -s.cameraY)
   // Tubulações suspensas desaparecem sob a copa da floresta.
   if (s.player.x < 6500) { ctx.strokeStyle = "#4c4941"; ctx.lineWidth = 12; ctx.beginPath(); ctx.moveTo(0, 98); ctx.lineTo(VIEW_WIDTH, 98); ctx.stroke(); ctx.strokeStyle = "#211f1c"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(0, 103); ctx.lineTo(VIEW_WIDTH, 103); ctx.stroke(); for (let x = -((cam * 0.75) % 230); x < VIEW_WIDTH; x += 230) { ctx.fillStyle = "#62584b"; ctx.fillRect(x, 91, 22, 17); ctx.strokeStyle = "#7c6551"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x + 4, 98); ctx.lineTo(x + 18, 98); ctx.stroke() } }
   // Piso metálico em placas.
   ctx.fillStyle = blendColor("#252625", "#1d3929", forestBlend); ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, VIEW_HEIGHT - GROUND_Y)
   for (let x = -((cam % 160)); x < VIEW_WIDTH; x += 160) { ctx.fillStyle = blendColor("#37352f", "#315337", forestBlend); ctx.fillRect(x, GROUND_Y + 2, 156, 5); ctx.fillStyle = blendColor("#72654f", "#8ca45f", forestBlend); ctx.beginPath(); ctx.arc(x + 8, GROUND_Y + 15, 2, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(x + 148, GROUND_Y + 15, 2, 0, Math.PI * 2); ctx.fill() }
-  for (const platform of PLATFORMS) { const x = platform.x - cam; if (x < -250 || x > VIEW_WIDTH + 200) continue; ctx.fillStyle = "#302f2a"; ctx.fillRect(x, platform.y, platform.w, 13); ctx.fillStyle = "#827053"; ctx.fillRect(x, platform.y, platform.w, 3); ctx.fillStyle = "#51493d"; for (let b = 12; b < platform.w; b += 38) ctx.fillRect(x + b, platform.y + 4, 3, 7) }
+  if (s.layer === "surface") for (const platform of PLATFORMS) { const x = platform.x - cam; if (x < -250 || x > VIEW_WIDTH + 200) continue; ctx.fillStyle = "#302f2a"; ctx.fillRect(x, platform.y, platform.w, 13); ctx.fillStyle = "#827053"; ctx.fillRect(x, platform.y, platform.w, 3); ctx.fillStyle = "#51493d"; for (let b = 12; b < platform.w; b += 38) ctx.fillRect(x + b, platform.y + 4, 3, 7) }
+  if (s.layer === "surface" && s.player.x > 1370 && s.player.x < 1690) { const shaftX = 1515 - cam; const shaft = ctx.createLinearGradient(shaftX - 66, GROUND_Y, shaftX + 66, GROUND_Y + 100); shaft.addColorStop(0, "#080b0b"); shaft.addColorStop(.5, "#111411"); shaft.addColorStop(1, "#080a09"); ctx.fillStyle = shaft; ctx.fillRect(shaftX - 64, GROUND_Y, 128, 90); ctx.strokeStyle = "#75634b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(shaftX - 64, GROUND_Y + 1); ctx.lineTo(shaftX - 33, GROUND_Y + 9); ctx.moveTo(shaftX + 64, GROUND_Y + 1); ctx.lineTo(shaftX + 33, GROUND_Y + 9); ctx.stroke(); ctx.fillStyle = "rgba(147,177,124,.24)"; ctx.fillRect(shaftX - 11, GROUND_Y + 24, 2, 35); for (let i = 0; i < 4; i++) { const moteX = shaftX + Math.sin(s.time * .8 + i) * 19; const moteY = GROUND_Y - 5 + ((s.time * 17 + i * 15) % 32); ctx.fillStyle = `rgba(184,194,156,${.12 + (i % 2) * .08})`; ctx.fillRect(moteX, moteY, 1.5, 2) } }
+  if (s.layer === "underworks") {
+    const cave = ctx.createLinearGradient(0, 80, 0, GROUND_Y); cave.addColorStop(0, "#0b100f"); cave.addColorStop(.72, "#141916"); cave.addColorStop(1, "#24241e"); ctx.fillStyle = cave; ctx.fillRect(0, 80, VIEW_WIDTH, GROUND_Y - 80)
+    for (let i = 0; i < 7; i++) { const x = i * 176 - (cam % 176); ctx.fillStyle = i % 2 ? "#282a24" : "#353127"; polygon(ctx, [[x - 14, 83], [x + 1, 108], [x + 12, 146], [x + 25, 109], [x + 37, 83]], "#282a24", ""); ctx.fillStyle = "#3d382d"; ctx.fillRect(x + 5, 152, 8, GROUND_Y - 152); ctx.fillStyle = "#827451"; ctx.fillRect(x + 4, 152, 2, GROUND_Y - 152) }
+    for (let i = 0; i < 9; i++) { const x = (i * 131 + Math.sin(s.time * .7 + i) * 8) % VIEW_WIDTH; ctx.fillStyle = i % 3 ? "rgba(144,174,116,.34)" : "rgba(192,151,95,.42)"; ctx.beginPath(); ctx.arc(x, 182 + (i * 61) % 215, 1.5, 0, Math.PI * 2); ctx.fill() }
+    const shaftX = 1515 - cam; ctx.strokeStyle = "#776547"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(shaftX - 35, 120); ctx.lineTo(shaftX - 35, GROUND_Y); ctx.moveTo(shaftX + 35, 120); ctx.lineTo(shaftX + 35, GROUND_Y); ctx.stroke(); ctx.strokeStyle = "#b18b54"; ctx.lineWidth = 2; for (let y = 150; y < GROUND_Y; y += 38) { ctx.beginPath(); ctx.moveTo(shaftX - 35, y); ctx.lineTo(shaftX + 35, y); ctx.stroke() }
+    if (!s.lowerWallBroken) { const wallX = 1838 - cam; ctx.fillStyle = "#3b352b"; ctx.fillRect(wallX - 12, 314, 25, GROUND_Y - 314); ctx.fillStyle = "#625441"; ctx.fillRect(wallX - 12, 314, 25, 4); ctx.fillStyle = "#a28a64"; for (let i = 0; i < 3; i++) ctx.fillRect(wallX - 8 + i * 8, 330, 2, 3); if (s.lowerWallHits > 0) { ctx.strokeStyle = "#b6a07a"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(wallX - 3, 335); ctx.lineTo(wallX + 2, 357); ctx.lineTo(wallX - 1, 375); if (s.lowerWallHits > 1) { ctx.moveTo(wallX + 5, 340); ctx.lineTo(wallX - 4, 365); ctx.lineTo(wallX + 3, 389) } ctx.stroke() } }
+    else { const memoryX = 1885 - cam, panelX = 1975 - cam, hatchX = 2060 - cam; ctx.fillStyle = "#a7b879"; ctx.shadowColor = "#a7b879"; ctx.shadowBlur = 12; ctx.fillRect(memoryX - 2, 389, 4, 5); ctx.shadowBlur = 0; ctx.fillStyle = "#343a31"; rounded(ctx, panelX - 23, 320, 46, 118, 4); ctx.fillStyle = s.relayActivated ? "#a8d387" : "#68755c"; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = s.relayActivated ? 12 : 0; ctx.fillRect(panelX - 12, 338, 24, 42); ctx.shadowBlur = 0; ctx.fillStyle = "#95835f"; ctx.fillRect(hatchX - 25, 343, 50, 115); ctx.fillStyle = s.relayActivated ? "#a6ca7c" : "#534a39"; ctx.fillRect(hatchX - 2, 358, 4, 78); ctx.fillStyle = "#ddd4bd"; ctx.font = "8px monospace"; ctx.textAlign = "center"; ctx.fillText(s.relayActivated ? "ELEVADOR" : "NÚCLEO MUDO", panelX, 308) }
+  }
   // Lago de óleo e vegetação secreta.
-  if (s.player.x > 3300 && s.player.x < 4320) { ctx.fillStyle = "rgba(22,49,44,.8)"; ctx.fillRect(3200 - cam, 439, 1300, 18); for (let i = 0; i < 9; i++) { const x = 3620 + i * 48 - cam; ctx.strokeStyle = green ? "#668d58" : "#485548"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, GROUND_Y); ctx.quadraticCurveTo(x - 12, 436, x + 2, 425 - (i % 3) * 7); ctx.stroke(); if (green && i === 3) { ctx.fillStyle = "#a9cf7e"; ctx.beginPath(); ctx.arc(x + 2, 424, 7, 0, Math.PI * 2); ctx.fill() } } }
+  if (s.layer === "surface" && s.player.x > 3300 && s.player.x < 4320) { ctx.fillStyle = "rgba(22,49,44,.8)"; ctx.fillRect(3200 - cam, 439, 1300, 18); for (let i = 0; i < 9; i++) { const x = 3620 + i * 48 - cam; ctx.strokeStyle = green ? "#668d58" : "#485548"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, GROUND_Y); ctx.quadraticCurveTo(x - 12, 436, x + 2, 425 - (i % 3) * 7); ctx.stroke(); if (green && i === 3) { ctx.fillStyle = "#a9cf7e"; ctx.beginPath(); ctx.arc(x + 2, 424, 7, 0, Math.PI * 2); ctx.fill() } } }
   // Sucata de silhueta cede lugar às plantas na borda da floresta.
-  if (s.player.x < 6800) for (let i = 0; i < 20; i++) { const x = ((i * 73 + 45 - cam * 0.8) % 1300 + 1300) % 1300 - 120; ctx.fillStyle = i % 2 ? "#292522" : "#33302a"; ctx.beginPath(); ctx.moveTo(x, GROUND_Y); ctx.lineTo(x + 16, 410 - ((i * 37) % 36)); ctx.lineTo(x + 48, GROUND_Y); ctx.fill() }
+  if (s.layer === "surface" && s.player.x < 6800) for (let i = 0; i < 20; i++) { const x = ((i * 73 + 45 - cam * 0.8) % 1300 + 1300) % 1300 - 120; ctx.fillStyle = i % 2 ? "#292522" : "#33302a"; ctx.beginPath(); ctx.moveTo(x, GROUND_Y); ctx.lineTo(x + 16, 410 - ((i * 37) % 36)); ctx.lineTo(x + 48, GROUND_Y); ctx.fill() }
   // Marcos da jornada, incluindo a primeira raiz e o descanso entre as árvores.
   for (const point of [2480, 4600, 7100]) { const x = point - cam; if (x > -60 && x < VIEW_WIDTH + 60) { ctx.fillStyle = "#40392f"; rounded(ctx, x - 17, 408, 34, 50, 5); ctx.fillStyle = s.checkpoint === point ? "#c48b50" : "#758071"; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = s.checkpoint === point ? 16 : 5; ctx.beginPath(); ctx.arc(x, 423, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = "#9a8a6d"; ctx.fillRect(x - 24, 454, 48, 5); ctx.fillStyle = "#594d3b"; ctx.fillRect(x - 24, 437, 48, 6); ctx.fillRect(x - 20, 443, 4, 12); ctx.fillRect(x + 16, 443, 4, 12); ctx.fillStyle = "#c9b89b"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("MARCO", x, 397) } }
   if (s.player.x > 4150 && s.player.x < 4570) drawElevator(ctx, 4400 - cam, s.time, s.shortcut)
@@ -440,9 +489,10 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   if (s.player.x > 6000) drawTinyFlower(ctx, 6300 - cam, s.time, s.foundGreen)
   if (s.forestEntered && s.player.x > 6840) drawForestFlora(ctx, cam, s.time, s.foundGreen)
   if (s.secretFound && s.player.x > 6100 && s.player.x < 6300) { const secretX = 6145 - cam; ctx.fillStyle = "#171c18"; ctx.fillRect(secretX - 32, 378, 64, 77); ctx.fillStyle = "#a7ba77"; ctx.beginPath(); ctx.arc(secretX, 399, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ddd4bb"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("MEMÓRIA 01", secretX, 369) }
+  if (s.layer === "underworks") { const promptX = s.player.x - cam + 18; ctx.fillStyle = "#d6c5a3"; ctx.font = "9px monospace"; ctx.textAlign = "center"; if (Math.abs(s.player.x - 1515) < 85) ctx.fillText("[E] SUBIR", promptX, GROUND_Y - 68); else if (!s.lowerWallBroken && Math.abs(s.player.x - 1810) < 90) ctx.fillText("CHAPA · J", promptX, GROUND_Y - 68); else if (s.lowerWallBroken && Math.abs(s.player.x - 1885) < 48 && !s.tunnelMemoryFound) ctx.fillText("[E] MEMÓRIA", promptX, GROUND_Y - 68); else if (s.lowerWallBroken && Math.abs(s.player.x - 1975) < 70) ctx.fillText(s.relayActivated ? "PULSO ESTÁVEL" : "[K] PULSO", promptX, GROUND_Y - 68); else if (s.relayActivated && Math.abs(s.player.x - 2060) < 74) ctx.fillText("[E] ELEVADOR", promptX, GROUND_Y - 68) }
 
   // Inimigos com silhuetas diferentes.
-  for (const e of s.enemies) { if (!e.alive) continue; const x = e.x - cam; if (x < -80 || x > VIEW_WIDTH + 80) continue; drawEnemy(ctx, e, x, s.time); if (DEBUG_COMBAT) { ctx.strokeStyle = "#65e2c1"; ctx.lineWidth = 1; ctx.strokeRect(x - 23, e.y - 30, 46, 52) } }
+  for (const e of s.enemies) { if (!e.alive || (s.layer === "underworks" && e.id !== 3)) continue; const x = e.x - cam; if (x < -80 || x > VIEW_WIDTH + 80) continue; drawEnemy(ctx, e, x, s.time); if (DEBUG_COMBAT) { ctx.strokeStyle = "#65e2c1"; ctx.lineWidth = 1; ctx.strokeRect(x - 23, e.y - 30, 46, 52) } }
   // O Colosso prepara ataques com sinais visuais antes de cada impacto.
   if (!s.bossWon && s.player.x > 4950) drawColossus(ctx, s.boss, s.boss.x - cam, s.time)
   const p = s.player, px = p.x - cam, py = p.y
@@ -474,6 +524,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
     ctx.fillStyle = "#dcf0d8"; ctx.font = "10px monospace"; ctx.fillText(`ESTADO ${p.attackPhase} · ${p.attackDirection} · V ${Math.round(p.vx)},${Math.round(p.vy)} · N ${p.energy.toFixed(1)} · DASH ${p.dashCooldown.toFixed(1)} · PULSO ${p.pulseCooldown.toFixed(1)}`, 14, 22)
     ctx.restore()
   }
+  ctx.restore()
   // Poeira, partículas e faíscas ambientais.
   for (let i = 0; i < 36; i++) { const x = (i * 109 + s.time * (11 + i % 5) - cam * 0.2) % VIEW_WIDTH; const y = (i * 71 + s.time * (8 + i % 4)) % 430; ctx.fillStyle = i % 9 === 0 ? "rgba(215,137,73,.65)" : "rgba(190,184,158,.25)"; ctx.beginPath(); ctx.arc(x, y, i % 9 === 0 ? 1.7 : 1, 0, Math.PI * 2); ctx.fill() }
   ctx.fillStyle = "rgba(0,0,0,.22)"; const vignette = ctx.createRadialGradient(480, 250, 145, 480, 250, 560); vignette.addColorStop(0, "rgba(0,0,0,0)"); vignette.addColorStop(1, "rgba(0,0,0,.56)"); ctx.fillStyle = vignette; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
@@ -638,7 +689,7 @@ function drawMemoryNiche(ctx: CanvasRenderingContext2D, x: number, time: number)
 function drawResearchTerminal(ctx: CanvasRenderingContext2D, x: number, time: number, activated: boolean) { ctx.fillStyle="#2b302b";polygon(ctx,[[x-48,458],[x-43,362],[x-30,341],[x+35,341],[x+47,366],[x+51,458]],"#343a34");polygon(ctx,[[x-28,379],[x+27,379],[x+29,424],[x-27,424]],"#121d19");ctx.fillStyle="#9acf83";ctx.shadowColor="#8fe78c";ctx.shadowBlur=14;ctx.fillRect(x-20,387,40,2);ctx.fillRect(x-20,395,activated?41:24,2);ctx.fillRect(x-20,403,activated?34:16,2);if(activated){ctx.fillStyle="#a9d99a";polygon(ctx,[[x+7,389],[x+11,385],[x+16,387],[x+17,396],[x+14,403],[x+9,403],[x+6,397]],"#a9d99a","");ctx.fillRect(x+9,402,2,8);ctx.fillRect(x+14,402,2,8)}ctx.shadowBlur=0;ctx.fillStyle="#d9d8c4";ctx.font="9px monospace";ctx.textAlign="center";ctx.fillText(activated?"PROJETO SCRAPBOUND":"[E] ACESSAR REGISTRO",x,331);if(activated){ctx.fillStyle="#b4d8aa";ctx.font="8px monospace";ctx.fillText("STATUS: ATIVO",x,437)}else if(Math.sin(time*2)>0){ctx.fillStyle="#89b97b";ctx.fillRect(x+32,350,3,3)} }
 function drawTinyFlower(ctx: CanvasRenderingContext2D, x: number, time: number, discovered: boolean) { if (!discovered) return; ctx.strokeStyle="#6c884f";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,457);ctx.quadraticCurveTo(x-4,447,x+Math.sin(time*1.4)*2,435);ctx.stroke();ctx.fillStyle="#a4c277";polygon(ctx,[[x,449],[x-8,443],[x-1,441]],"#7da05a","");ctx.fillStyle="#dccc91";ctx.shadowColor="#d5e49b";ctx.shadowBlur=11;for(let i=0;i<5;i++){const angle=i*Math.PI*.4;ctx.beginPath();ctx.ellipse(x+Math.cos(angle)*4,435+Math.sin(angle)*4,3,2,angle,0,Math.PI*2);ctx.fill()}ctx.fillStyle="#e8bd63";ctx.beginPath();ctx.arc(x,435,2,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0 }
 function drawForestFlora(ctx: CanvasRenderingContext2D, cam: number, time: number, foundGreen: boolean) { for(let i=0;i<9;i++){const x=6830+i*116-cam;ctx.strokeStyle=i%2?"#557844":"#7c9652";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,458);ctx.quadraticCurveTo(x-7,446,x+Math.sin(time+i)*4,431-(i%3)*7);ctx.stroke();polygon(ctx,[[x,441],[x-9,434],[x-2,433]],"#749b5b","");if(i===2&&foundGreen){ctx.fillStyle="#e4c988";ctx.shadowColor="#d9e9a5";ctx.shadowBlur=9;ctx.beginPath();ctx.arc(x,429,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0}} }
-export function saveableState(s: GameState): Partial<GameState> { return { player: { ...s.player, hp: Math.max(1, s.player.hp), vx: 0, vy: 0, sitting: false, attack: 0, dash: 0 }, enemies: s.enemies, boss: s.boss, checkpoint: s.checkpoint, foundGreen: s.foundGreen, forestEntered: s.forestEntered, flowerBloomed: s.flowerBloomed, projectRevealed: s.projectRevealed, secretFound: s.secretFound, wallBroken: s.wallBroken, shortcut: s.shortcut, bossWon: s.bossWon, ferronMet: s.ferronMet, upgrades: s.upgrades } }
+export function saveableState(s: GameState): Partial<GameState> { return { player: { ...s.player, hp: Math.max(1, s.player.hp), vx: 0, vy: 0, sitting: false, attack: 0, dash: 0 }, enemies: s.enemies, boss: s.boss, checkpoint: s.checkpoint, foundGreen: s.foundGreen, forestEntered: s.forestEntered, flowerBloomed: s.flowerBloomed, projectRevealed: s.projectRevealed, secretFound: s.secretFound, wallBroken: s.wallBroken, shortcut: s.shortcut, bossWon: s.bossWon, ferronMet: s.ferronMet, upgrades: s.upgrades, layer: s.layer, lowerWallHits: s.lowerWallHits, lowerWallHitBy: s.lowerWallHitBy, lowerWallBroken: s.lowerWallBroken, relayActivated: s.relayActivated, tunnelMemoryFound: s.tunnelMemoryFound, discoveredRooms: s.discoveredRooms } }
 export function loadSavedState(): Partial<GameState> | undefined { try { const data = localStorage.getItem("scrapbound-save"); return data ? JSON.parse(data) as Partial<GameState> : undefined } catch { return undefined } }
 export function persistState(s: GameState) { try { localStorage.setItem("scrapbound-save", JSON.stringify(saveableState(s))) } catch { /* armazenamento pode estar indisponível no modo privado */ } }
 export function resetSave() { try { localStorage.removeItem("scrapbound-save") } catch { /* armazenamento opcional */ } }
