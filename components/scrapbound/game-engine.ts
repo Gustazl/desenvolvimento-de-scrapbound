@@ -361,6 +361,7 @@ function blendColor(a: string, b: string, amount: number) { const t = Math.max(0
 function polygon(ctx: CanvasRenderingContext2D, points: [number, number][], fill: string, stroke = "#201e1a") { ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]); for (const [x, y] of points.slice(1)) ctx.lineTo(x, y); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke() } }
 
 export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: number, height: number) {
+  if (!Array.isArray(s.particles)) s.particles = []
   const sx = width / VIEW_WIDTH, sy = height / VIEW_HEIGHT
   ctx.setTransform(sx, 0, 0, sy, 0, 0)
   ctx.fillStyle = "#111714"; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
