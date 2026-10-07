@@ -57,7 +57,7 @@ export function createGameState(saved?: Partial<GameState>): GameState {
     deathTimer: 0, camera: 0, cameraZoom: 1, time: 0, hitStop: 0, cameraShake: 0, particles: [], checkpoint: 0, foundGreen: false, forestEntered: false, forestMoment: 0, flowerBloomed: false, projectRevealed: false, secretFound: false, wallBroken: false, shortcut: false, bossWon: false, ferronMet: false, upgrades: [], dialogue: null, toast: "", toastTimer: 0, savePulse: 0,
   }
   if (!saved) return base
-  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, boss: { ...base.boss, ...saved.boss } }
+  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, particles: Array.isArray(saved.particles) ? saved.particles : [], unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, boss: { ...base.boss, ...saved.boss } }
 }
 
 export function getArea(x: number) { return AREAS.find((area) => x >= area.start && x < area.end) ?? AREAS[AREAS.length - 1] }
@@ -159,6 +159,7 @@ function usePulse(s: GameState) {
 }
 
 export function tickGame(s: GameState, keys: Set<string>, dt: number) {
+  if (!Array.isArray(s.particles)) s.particles = []
   const p = s.player
   s.time += dt
   s.toastTimer = Math.max(0, s.toastTimer - dt)
@@ -461,7 +462,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
     for (let ring = 0; ring < 2; ring++) { ctx.beginPath(); ctx.arc(0, 0, 30 + progress * (120 + ring * 18), 0, Math.PI * 2); ctx.stroke() }
     ctx.restore(); ctx.globalAlpha = 1
   }
-  for (const particle of s.particles) {
+  for (const particle of Array.isArray(s.particles) ? s.particles : []) {
     ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife)
     ctx.fillStyle = particle.color; ctx.fillRect(particle.x - cam, particle.y, particle.size, particle.size)
   }
