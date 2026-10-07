@@ -1,16 +1,19 @@
 export type EnemyKind = "crawler" | "fly" | "soldier" | "spider"
-export type Enemy = { id: number; kind: EnemyKind; x: number; y: number; vx: number; hp: number; maxHp: number; phase: number; hitBy: number; alive: boolean }
+export type AttackDirection = "left" | "right" | "up" | "down"
+export type HitParticle = { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string; size: number }
+export type Enemy = { id: number; kind: EnemyKind; x: number; y: number; vx: number; hp: number; maxHp: number; phase: number; hitBy: number; hurtTimer?: number; hitFlash?: number; knockY?: number; alive: boolean }
 export type Dialogue = { name: string; lines: string[]; index: number; shop?: boolean }
 export type GameState = {
-  player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; dash: number; dashCooldown: number; invulnerable: number }
-  enemies: Enemy[]; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean }
-  deathTimer: number; camera: number; cameraZoom: number; time: number; checkpoint: number; foundGreen: boolean; forestEntered: boolean; forestMoment: number; flowerBloomed: boolean; projectRevealed: boolean; secretFound: boolean; wallBroken: boolean; shortcut: boolean; bossWon: boolean; ferronMet: boolean; upgrades: string[]; dialogue: Dialogue | null; toast: string; toastTimer: number; savePulse: number
+  player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; attackDirection: AttackDirection; attackPhase: "idle" | "start" | "active" | "recovery"; comboStep: number; comboWindow: number; attackBuffer: number; jumpBuffer: number; coyoteTime: number; dash: number; dashCooldown: number; invulnerable: number; hurtFlash: number; pulseCooldown: number; pulseEffect: number; pogoCooldown: number }
+  enemies: Enemy[]; unlockedModules: string[]; equippedModules: string[]; moduleSlots: number; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean }
+  deathTimer: number; camera: number; cameraZoom: number; time: number; hitStop: number; cameraShake: number; particles: HitParticle[]; checkpoint: number; foundGreen: boolean; forestEntered: boolean; forestMoment: number; flowerBloomed: boolean; projectRevealed: boolean; secretFound: boolean; wallBroken: boolean; shortcut: boolean; bossWon: boolean; ferronMet: boolean; upgrades: string[]; dialogue: Dialogue | null; toast: string; toastTimer: number; savePulse: number
 }
 
 export const WORLD_WIDTH = 9200
 export const VIEW_WIDTH = 960
 export const VIEW_HEIGHT = 540
 export const GROUND_Y = 458
+export const DEBUG_COMBAT = false
 export const AREAS = [
   { name: "Montanha do Descarte", start: 0, end: 1100, tint: "#382e2a" },
   { name: "Túneis de Ferrugem", start: 1100, end: 2200, tint: "#292d2b" },
@@ -36,29 +39,124 @@ export const PLATFORMS = [
 
 export function createGameState(saved?: Partial<GameState>): GameState {
   const base: GameState = {
-    player: { x: 120, y: GROUND_Y - 42, vx: 0, vy: 0, hp: 5, maxHp: 5, energy: 3, screws: 12, facing: 1, grounded: false, sitting: false, attack: 0, attackId: 0, dash: 0, dashCooldown: 0, invulnerable: 0 },
+    player: { x: 120, y: GROUND_Y - 42, vx: 0, vy: 0, hp: 5, maxHp: 5, energy: 3, screws: 12, facing: 1, grounded: false, sitting: false, attack: 0, attackId: 0, attackDirection: "right", attackPhase: "idle", comboStep: 0, comboWindow: 0, attackBuffer: 0, jumpBuffer: 0, coyoteTime: 0, dash: 0, dashCooldown: 0, invulnerable: 0, hurtFlash: 0, pulseCooldown: 0, pulseEffect: 0, pogoCooldown: 0 },
+    unlockedModules: [], equippedModules: [], moduleSlots: 2,
     enemies: [
-      { id: 1, kind: "crawler", x: 650, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, alive: true },
-      { id: 2, kind: "fly", x: 1020, y: 310, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, alive: true },
-      { id: 3, kind: "spider", x: 1760, y: 345, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, alive: true },
-      { id: 4, kind: "soldier", x: 2150, y: GROUND_Y - 40, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, alive: true },
-      { id: 5, kind: "crawler", x: 3420, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, alive: true },
-      { id: 6, kind: "fly", x: 3890, y: 280, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, alive: true },
-      { id: 7, kind: "soldier", x: 4330, y: GROUND_Y - 40, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, alive: true },
-      { id: 8, kind: "crawler", x: 6020, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, alive: true },
-      { id: 9, kind: "spider", x: 6650, y: 350, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, alive: true },
-      { id: 10, kind: "fly", x: 7310, y: 285, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, alive: true },
+      { id: 1, kind: "crawler", x: 650, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 2, kind: "fly", x: 1020, y: 310, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 3, kind: "spider", x: 1760, y: 345, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 4, kind: "soldier", x: 2150, y: GROUND_Y - 40, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 5, kind: "crawler", x: 3420, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 6, kind: "fly", x: 3890, y: 280, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 7, kind: "soldier", x: 4330, y: GROUND_Y - 40, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 8, kind: "crawler", x: 6020, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 9, kind: "spider", x: 6650, y: 350, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 10, kind: "fly", x: 7310, y: 285, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
     ],
     boss: { hp: 18, maxHp: 18, x: 5480, phase: 0, timer: 1.4, attack: "slam", alive: true, hitBy: -1, secondPhase: false },
-    deathTimer: 0, camera: 0, cameraZoom: 1, time: 0, checkpoint: 0, foundGreen: false, forestEntered: false, forestMoment: 0, flowerBloomed: false, projectRevealed: false, secretFound: false, wallBroken: false, shortcut: false, bossWon: false, ferronMet: false, upgrades: [], dialogue: null, toast: "", toastTimer: 0, savePulse: 0,
+    deathTimer: 0, camera: 0, cameraZoom: 1, time: 0, hitStop: 0, cameraShake: 0, particles: [], checkpoint: 0, foundGreen: false, forestEntered: false, forestMoment: 0, flowerBloomed: false, projectRevealed: false, secretFound: false, wallBroken: false, shortcut: false, bossWon: false, ferronMet: false, upgrades: [], dialogue: null, toast: "", toastTimer: 0, savePulse: 0,
   }
   if (!saved) return base
-  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, boss: { ...base.boss, ...saved.boss } }
+  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, boss: { ...base.boss, ...saved.boss } }
 }
 
 export function getArea(x: number) { return AREAS.find((area) => x >= area.start && x < area.end) ?? AREAS[AREAS.length - 1] }
 
 function setToast(state: GameState, text: string) { state.toast = text; state.toastTimer = 2.8 }
+
+function unlockModules(state: GameState, modules: string[]) {
+  for (const module of modules) if (!state.unlockedModules.includes(module)) state.unlockedModules.push(module)
+}
+
+export function toggleModule(state: GameState, id: string) {
+  if (!state.unlockedModules.includes(id)) return
+  if (state.equippedModules.includes(id)) {
+    state.equippedModules = state.equippedModules.filter((module) => module !== id)
+    setToast(state, "Módulo removido do Núcleo.")
+    return
+  }
+  if (state.equippedModules.length >= state.moduleSlots) { setToast(state, `Slots ocupados: ${state.moduleSlots}. Remova um módulo primeiro.`); return }
+  state.equippedModules.push(id)
+  setToast(state, "Módulo sintonizado ao Núcleo.")
+}
+
+function coreCapacity(s: GameState) { return s.upgrades.includes("core") ? 4 : 3 }
+
+function attackDirection(keys: Set<string>, facing: number): AttackDirection {
+  if (keys.has("w") || keys.has("arrowup")) return "up"
+  if (keys.has("s") || keys.has("arrowdown")) return "down"
+  if (keys.has("a") || keys.has("arrowleft")) return "left"
+  if (keys.has("d") || keys.has("arrowright")) return "right"
+  return facing < 0 ? "left" : "right"
+}
+
+function isInsideAttack(p: GameState["player"], x: number, y: number) {
+  const centerX = p.x + 18
+  const centerY = p.y + 22
+  const strong = p.comboStep === 3
+  if (p.attackDirection === "up") return Math.abs(x - centerX) < (strong ? 68 : 58) && y < centerY - 10 && y > centerY - (strong ? 168 : 150)
+  if (p.attackDirection === "down") return Math.abs(x - centerX) < (strong ? 62 : 54) && y > centerY + 7 && y < centerY + (strong ? 154 : 138)
+  const direction = p.attackDirection === "left" ? -1 : 1
+  return Math.abs(x - (centerX + direction * (strong ? 58 : 48))) < (strong ? 60 : 52) && Math.abs(y - centerY) < (strong ? 66 : 58)
+}
+
+function addSparks(s: GameState, x: number, y: number, strong = false) {
+  const count = strong ? 8 : 5
+  for (let index = 0; index < count; index++) {
+    const angle = (Math.PI * 2 * index) / count + s.time * 3
+    const speed = 45 + (index % 3) * 22
+    s.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 18, life: .22 + (index % 3) * .035, maxLife: .3, color: index % 3 === 0 ? "#fff0c0" : "#e8a354", size: strong ? 2.5 : 1.8 })
+  }
+}
+
+function beginAttack(p: GameState["player"], keys: Set<string>) {
+  p.attackDirection = attackDirection(keys, p.facing)
+  p.comboStep = p.comboWindow > 0 ? Math.min(3, p.comboStep + 1) : 1
+  p.comboWindow = .48
+  p.attack = .3
+  p.attackPhase = "start"
+  p.attackId += 1
+  p.sitting = false
+}
+
+function usePulse(s: GameState) {
+  const p = s.player
+  if (!s.bossWon || p.energy < 1 || p.pulseCooldown > 0) return
+  p.energy -= 1
+  p.pulseCooldown = .55
+  p.pulseEffect = .42
+  s.hitStop = Math.max(s.hitStop, .04)
+  s.cameraShake = Math.max(s.cameraShake, 3)
+  addSparks(s, p.x + 18, p.y + 22, true)
+  const pulseRange = s.equippedModules.includes("eco") ? 260 : 175
+  for (const enemy of s.enemies) {
+    if (!enemy.alive || Math.abs(enemy.x - (p.x + 18)) > pulseRange || Math.abs(enemy.y - (p.y + 22)) > 145) continue
+    enemy.hp -= 1
+    enemy.vx = Math.sign(s.equippedModules.includes("magnetico") ? p.x - enemy.x : enemy.x - p.x || p.facing) * (s.equippedModules.includes("magnetico") ? 300 : 245)
+    enemy.hurtTimer = .2
+    enemy.hitFlash = .16
+    addSparks(s, enemy.x, enemy.y, false)
+    if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(coreCapacity(s), p.energy + .2) }
+  }
+  if (s.boss.alive && Math.abs(s.boss.x - (p.x + 18)) < 195 && Math.abs((GROUND_Y - 100) - (p.y + 22)) < 160) {
+    s.boss.hp -= 1
+    s.boss.hitBy = -1
+    addSparks(s, s.boss.x, GROUND_Y - 100, true)
+  }
+  if (!s.wallBroken && p.x > 5960 && p.x < 6250) {
+    s.wallBroken = true
+    s.secretFound = true
+    unlockModules(s, ["magnetico", "eco"])
+    p.screws += 8
+    setToast(s, "O Pulso rompe a parede. Uma oficina escondida — e uma memória sem assinatura.")
+    s.savePulse = 2
+  } else setToast(s, "Pulso liberado. A sucata vibra ao redor de Caco.")
+  if (s.equippedModules.includes("raiz") && s.foundGreen && p.x > 6200 && p.x < 6900 && !s.flowerBloomed) {
+    s.flowerBloomed = true
+    if (s.toast !== "O Pulso rompe a parede. Uma oficina escondida — e uma memória sem assinatura.") setToast(s, "O Núcleo desperta a raiz adormecida. Uma flor floresce no braço de Caco.")
+    s.savePulse = 2
+  }
+}
 
 export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   const p = s.player
@@ -66,28 +164,58 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   s.toastTimer = Math.max(0, s.toastTimer - dt)
   s.savePulse = Math.max(0, s.savePulse - dt)
   s.forestMoment = Math.max(0, s.forestMoment - dt)
+  s.hitStop = Math.max(0, s.hitStop - dt)
+  s.cameraShake = Math.max(0, s.cameraShake - dt * 18)
+  s.particles = s.particles.filter((particle) => {
+    particle.life -= dt
+    particle.x += particle.vx * dt
+    particle.y += particle.vy * dt
+    particle.vy += 210 * dt
+    return particle.life > 0
+  })
   const wasDying = s.deathTimer > 0
   s.deathTimer = Math.max(0, s.deathTimer - dt)
-  if (wasDying && s.deathTimer === 0) { p.hp = p.maxHp; p.x = s.checkpoint || 120; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.4; setToast(s, "Caco foi remontado no último Marco."); s.savePulse = 2 }
+  if (wasDying && s.deathTimer === 0) { p.hp = p.maxHp; p.x = s.checkpoint || 120; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.4; p.hurtFlash = 0; setToast(s, "Caco foi remontado no último Marco."); s.savePulse = 2 }
+  if (s.hitStop > 0) return
   s.cameraZoom += ((s.forestMoment > 0 ? .78 : 1) - s.cameraZoom) * Math.min(1, dt * 1.1)
   p.invulnerable = Math.max(0, p.invulnerable - dt)
+  p.hurtFlash = Math.max(0, p.hurtFlash - dt)
+  p.pulseCooldown = Math.max(0, p.pulseCooldown - dt)
+  p.pulseEffect = Math.max(0, p.pulseEffect - dt)
   p.dashCooldown = Math.max(0, p.dashCooldown - dt)
   p.attack = Math.max(0, p.attack - dt)
+  p.attackPhase = p.attack <= 0 ? "idle" : p.attack > .22 ? "start" : p.attack >= .1 ? "active" : "recovery"
+  p.comboWindow = Math.max(0, p.comboWindow - dt)
+  p.attackBuffer = Math.max(0, p.attackBuffer - dt)
+  p.jumpBuffer = Math.max(0, p.jumpBuffer - dt)
   p.dash = Math.max(0, p.dash - dt)
+  p.coyoteTime = p.grounded ? .12 : Math.max(0, p.coyoteTime - dt)
   const scripted = s.forestMoment > 0 || s.deathTimer > 0
   const left = !scripted && (keys.has("a") || keys.has("arrowleft"))
   const right = !scripted && (keys.has("d") || keys.has("arrowright"))
+  if (left !== right) p.facing = left ? -1 : 1
 
-  if (!scripted && (keys.has("j") || keys.has("mouse"))) {
-    if (p.attack <= 0 && p.dash <= 0) { p.sitting = false; p.attack = 0.24; p.attackId += 1 }
+  if (!scripted && keys.has("_jumpPressed")) { p.jumpBuffer = .12; keys.delete("_jumpPressed") }
+  if (!scripted && keys.has("_attackPressed")) {
+    keys.delete("_attackPressed")
+    p.attackBuffer = .36
   }
-  if (!scripted && keys.has("space") && p.grounded) { p.sitting = false; p.vy = -560; p.grounded = false }
-  if (!scripted && keys.has("shift") && p.dashCooldown <= 0 && p.dash <= 0) { p.sitting = false; p.dash = 0.18; p.dashCooldown = s.upgrades.includes("dash") ? 0.46 : 0.72; p.vx = p.facing * 610 }
-  if (!scripted && keys.has("k") && s.bossWon && p.energy > 0 && !keys.has("_usedK")) { p.energy -= 1; p.attack = 0.4; p.attackId += 1; keys.add("_usedK") }
-  if (!keys.has("k")) keys.delete("_usedK")
+  if (!scripted && keys.has("_pulsePressed")) { keys.delete("_pulsePressed"); usePulse(s) }
+  const dashPressed = keys.has("_dashPressed")
+  if (dashPressed) keys.delete("_dashPressed")
+  if (!scripted && dashPressed && p.dashCooldown <= 0 && p.dash <= 0) {
+    p.sitting = false
+    p.attack = 0
+    p.attackPhase = "idle"
+    p.dash = .18
+    p.dashCooldown = s.upgrades.includes("dash") ? .46 : .72
+    p.vx = p.facing * 610
+    addSparks(s, p.x + 18, p.y + 24)
+  }
+  if (p.attackBuffer > 0 && p.attack <= 0 && p.dash <= 0 && !scripted) { beginAttack(p, keys); p.attackBuffer = 0 }
 
   if (p.dash <= 0) {
-    if (left !== right) { p.sitting = false; p.vx = (left ? -1 : 1) * (keys.has("_run") ? 285 : 220); p.facing = left ? -1 : 1 }
+    if (left !== right) { p.sitting = false; p.vx = (left ? -1 : 1) * (keys.has("_run") ? 285 : 220) }
     else p.vx *= Math.pow(0.0009, dt)
     p.vy = Math.min(p.vy + 1450 * dt, 900)
   }
@@ -102,6 +230,10 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
       p.y = platform.y - 42; p.vy = 0; p.grounded = true
     }
   }
+  p.pogoCooldown = Math.max(0, p.pogoCooldown - dt)
+  if (p.jumpBuffer > 0 && (p.grounded || p.coyoteTime > 0) && !scripted) {
+    p.sitting = false; p.vy = -560; p.grounded = false; p.coyoteTime = 0; p.jumpBuffer = 0
+  }
   if (p.y > VIEW_HEIGHT + 400 && s.deathTimer <= 0) { p.hp = 0; s.deathTimer = .78; p.y = GROUND_Y - 42; p.vy = -180; p.vx = 0; p.screws = Math.max(0, p.screws - 5); setToast(s, "As peças de Caco se soltam. O Marco ainda lembra.") }
 
   const targetCamera = Math.max(0, Math.min(WORLD_WIDTH - VIEW_WIDTH, p.x - VIEW_WIDTH * 0.42))
@@ -110,26 +242,49 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   for (const enemy of s.enemies) {
     if (scripted || !enemy.alive) continue
     enemy.phase += dt
+    enemy.hurtTimer = Math.max(0, (enemy.hurtTimer ?? 0) - dt)
+    enemy.hitFlash = Math.max(0, (enemy.hitFlash ?? 0) - dt)
     const distance = p.x - enemy.x
-    if (Math.abs(distance) < 310) {
+    if (enemy.hurtTimer <= 0 && Math.abs(distance) < 310) {
       if (enemy.kind === "fly") { enemy.vx = Math.sign(distance) * Math.min(90, Math.abs(distance) * 0.35); enemy.y = 290 + Math.sin(enemy.phase * 2.1) * 46 }
       else if (enemy.kind === "spider") { enemy.vx = Math.sign(distance) * 70; enemy.y = 345 + Math.sin(enemy.phase * 3) * 55 }
       else enemy.vx = Math.sign(distance) * (enemy.kind === "soldier" ? 76 : 48)
-    } else enemy.vx *= 0.92
-    if (enemy.kind !== "fly" && enemy.kind !== "spider") enemy.y = GROUND_Y - (enemy.kind === "soldier" ? 40 : 24)
+    } else if (enemy.hurtTimer <= 0) enemy.vx *= 0.92
+    if (enemy.knockY) { enemy.y += enemy.knockY * dt; enemy.knockY = Math.min(900, enemy.knockY + 520 * dt); if (enemy.hurtTimer <= 0 && enemy.kind !== "fly" && enemy.kind !== "spider" && enemy.knockY > 0) { enemy.y = GROUND_Y - (enemy.kind === "soldier" ? 40 : 24); enemy.knockY = 0 } }
+    else if (enemy.kind !== "fly" && enemy.kind !== "spider") enemy.y = GROUND_Y - (enemy.kind === "soldier" ? 40 : 24)
     enemy.x += enemy.vx * dt
-    const strikeReach = p.attackId % 2 === 0 ? 54 : 40
-    if (p.attack > 0.08 && enemy.hitBy !== p.attackId && Math.abs(enemy.x - (p.x + p.facing * strikeReach)) < 58 && Math.abs(enemy.y - (p.y + (p.grounded ? 12 : 32))) < 88) {
-      enemy.hitBy = p.attackId; enemy.hp -= s.upgrades.includes("blade") ? 2 : 1; enemy.vx = p.facing * (s.upgrades.includes("blade") ? 260 : 180); enemy.phase += .7
-      if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(s.upgrades.includes("core") ? 4 : 3, p.energy + 0.25) }
+    const attackActive = p.attackPhase === "active"
+    if (attackActive && enemy.hitBy !== p.attackId && isInsideAttack(p, enemy.x, enemy.y)) {
+      const strongHit = p.comboStep === 3
+      const overcharged = strongHit && s.equippedModules.includes("sobrecharge") && p.energy >= coreCapacity(s)
+      const damage = (s.upgrades.includes("blade") ? 2 : 1) + (strongHit ? 1 : 0) + (overcharged ? 1 : 0)
+      if (overcharged) p.energy -= 1
+      enemy.hitBy = p.attackId
+      enemy.hp -= damage
+      enemy.hurtTimer = .16
+      enemy.hitFlash = .17
+      enemy.vx = (p.attackDirection === "left" ? -1 : p.attackDirection === "right" ? 1 : p.facing) * (strongHit ? 290 : 205)
+      enemy.knockY = p.attackDirection === "down" ? 0 : p.attackDirection === "up" ? -150 : enemy.knockY ?? 0
+      enemy.phase += .7
+      p.energy = Math.min(coreCapacity(s), p.energy + .08)
+      if (p.attackDirection === "down" && !p.grounded && p.pogoCooldown <= 0) {
+        p.vy = s.equippedModules.includes("impulso") ? -490 : -380
+        p.grounded = false
+        p.pogoCooldown = .38
+      }
+      s.hitStop = Math.max(s.hitStop, strongHit ? .065 : .04)
+      s.cameraShake = Math.max(s.cameraShake, strongHit ? 3.2 : 1.2)
+      addSparks(s, enemy.x, enemy.y, strongHit)
+      if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(coreCapacity(s), p.energy + .35) }
     }
-    if (Math.abs(enemy.x - p.x) < 35 && Math.abs(enemy.y - p.y) < 45 && p.invulnerable <= 0 && p.dash <= 0) {
-      p.hp -= 1; p.invulnerable = 1.05; p.vx = Math.sign(p.x - enemy.x) * 260; p.vy = -270
+    if (Math.abs(enemy.x - (p.x + 18)) < 35 && Math.abs(enemy.y - (p.y + 21)) < 48 && p.invulnerable <= 0 && p.dash <= 0) {
+      p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; p.vx = Math.sign(p.x - enemy.x || -p.facing) * 260; p.vy = -270
+      addSparks(s, p.x + 18, p.y + 22, false)
       if (p.hp <= 0 && s.deathTimer <= 0) { s.deathTimer = .78; p.sitting = false; p.vx = 0; p.vy = -180; p.attack = 0; p.screws = Math.max(0, p.screws - 5); setToast(s, "As peças de Caco se soltam. O Marco ainda lembra.") }
     }
   }
 
-  if (p.attack > .08 && !s.wallBroken && p.x > 6040 && p.x < 6170 && p.facing > 0) { s.wallBroken = true; s.secretFound = true; p.screws += 8; setToast(s, "A parede cede. Uma oficina escondida — e uma memória sem assinatura."); s.savePulse = 2 }
+  if (p.attackPhase === "active" && p.attackDirection === "right" && !s.wallBroken && p.x > 6040 && p.x < 6170) { s.wallBroken = true; s.secretFound = true; unlockModules(s, ["magnetico", "eco"]); p.screws += 8; setToast(s, "A parede cede. Uma oficina escondida — e uma memória sem assinatura."); s.savePulse = 2 }
 
   if (!s.bossWon && p.x > 5110 && !scripted) {
     const b = s.boss
@@ -137,16 +292,24 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     if (!b.secondPhase && b.hp <= b.maxHp / 2) { b.secondPhase = true; setToast(s, "O núcleo vermelho se abre. A Fornalha ainda não terminou."); s.savePulse = 2 }
     if (b.timer <= 0) { b.attack = (["slam", "charge", "shards"] as const)[Math.floor((b.phase * 2.4) % 3)]; b.timer = (b.attack === "charge" ? 2.1 : 2.8) * (b.secondPhase ? .72 : 1) }
     if (b.attack === "charge" && b.timer <= 1.35 && b.timer > .28) b.x += Math.sign(p.x - b.x) * (b.secondPhase ? 340 : 270) * dt
-    if (b.attack === "charge" && b.timer < .28 && Math.abs(b.x - p.x) < 120 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = 1; p.vy = -330 }
-    if (b.attack === "slam" && b.timer < 0.4 && Math.abs(b.x - p.x) < 110 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = 1; p.vy = -300 }
-    if (b.attack === "shards" && b.timer < 0.25 && Math.abs(b.x - p.x) < 260 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = 0.9 }
-    if (p.attack > 0.08 && b.hitBy !== p.attackId && Math.abs(p.x - b.x) < 125 && Math.abs(p.y - (GROUND_Y - 100)) < 120) { b.hitBy = p.attackId; b.hp -= 1; p.energy = Math.min(3, p.energy + 0.2) }
-    if (b.hp <= 0) { b.alive = false; s.bossWon = true; s.upgrades.push("Pulso de Sucata"); setToast(s, "O Colosso caiu. Habilidade desbloqueada: Pulso de Sucata."); s.savePulse = 2 }
+    if (b.attack === "charge" && b.timer < .28 && Math.abs(b.x - p.x) < 120 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; p.vy = -330; p.vx = Math.sign(p.x - b.x || -p.facing) * 300; addSparks(s, p.x + 18, p.y + 22) }
+    if (b.attack === "slam" && b.timer < 0.4 && Math.abs(b.x - p.x) < 110 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; p.vy = -300; p.vx = Math.sign(p.x - b.x || -p.facing) * 240; addSparks(s, p.x + 18, p.y + 22) }
+    if (b.attack === "shards" && b.timer < 0.25 && Math.abs(b.x - p.x) < 260 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; addSparks(s, p.x + 18, p.y + 22) }
+    if (p.attackPhase === "active" && b.hitBy !== p.attackId && isInsideAttack(p, b.x, GROUND_Y - 100)) {
+      const strongHit = p.comboStep === 3
+      const overcharged = strongHit && s.equippedModules.includes("sobrecharge") && p.energy >= coreCapacity(s)
+      const damage = (s.upgrades.includes("blade") ? 2 : 1) + (strongHit ? 1 : 0) + (overcharged ? 1 : 0)
+      if (overcharged) p.energy -= 1
+      b.hitBy = p.attackId; b.hp -= damage; p.energy = Math.min(coreCapacity(s), p.energy + .18)
+      s.hitStop = Math.max(s.hitStop, p.comboStep === 3 ? .07 : .045); s.cameraShake = Math.max(s.cameraShake, p.comboStep === 3 ? 4 : 1.5)
+      addSparks(s, b.x, GROUND_Y - 100, p.comboStep === 3)
+    }
+    if (b.hp <= 0) { b.alive = false; s.bossWon = true; if (!s.upgrades.includes("Pulso de Sucata")) s.upgrades.push("Pulso de Sucata"); unlockModules(s, ["impulso", "sobrecharge"]); setToast(s, "O Colosso caiu. Pulso de Sucata e módulos de Núcleo desbloqueados."); s.savePulse = 2 }
     if (p.hp <= 0 && s.deathTimer <= 0) { s.deathTimer = .78; p.sitting = false; p.vx = 0; p.vy = -180; p.attack = 0; p.screws = Math.max(0, p.screws - 5); setToast(s, "As peças de Caco se soltam. O Marco ainda lembra.") }
   }
 
   if (!s.foundGreen && p.x > 6200 && p.x < 6340) { s.foundGreen = true; setToast(s, "Uma folha verde entre as placas. O ar mudou."); s.savePulse = 2 }
-  if (!s.forestEntered && p.x > 6900) { s.forestEntered = true; s.forestMoment = 5.4; p.vx = 0; p.vy = 0; s.toast = ""; s.toastTimer = 0; s.savePulse = 2 }
+  if (!s.forestEntered && p.x > 6900) { s.forestEntered = true; s.forestMoment = 5.4; unlockModules(s, ["raiz"]); p.vx = 0; p.vy = 0; s.toast = ""; s.toastTimer = 0; s.savePulse = 2 }
   if (s.forestEntered && p.x > 7180 && !s.flowerBloomed) { s.flowerBloomed = true; s.upgrades.push("Broto de Sucata"); s.savePulse = 2 }
   if (p.x > 2440 && p.x < 2540 && p.y >= GROUND_Y - 80) {
     if (s.checkpoint < 2480) { s.checkpoint = 2480; s.savePulse = 2; setToast(s, "Marco de Sucata ativado — progresso salvo.") }
@@ -188,7 +351,7 @@ export function buyUpgrade(s: GameState, id: string) {
   if (s.player.screws < item.cost) return setToast(s, `Faltam parafusos. Custa ${item.cost}.`)
   s.player.screws -= item.cost; s.upgrades.push(id)
   if (id === "shell") { s.player.maxHp += 1; s.player.hp += 1 }
-  if (id === "core") s.player.energy = 4
+  if (id === "core") { s.player.energy = 4; s.moduleSlots = Math.max(s.moduleSlots, 3); setToast(s, "Núcleo ampliado. Capacidade de energia e um slot de módulo adicionados.") }
   setToast(s, `${item.label} instalada.`)
 }
 
@@ -202,6 +365,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   ctx.fillStyle = "#111714"; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
   ctx.save()
   ctx.translate(VIEW_WIDTH / 2, VIEW_HEIGHT / 2); ctx.scale(s.cameraZoom, s.cameraZoom); ctx.translate(-VIEW_WIDTH / 2, -VIEW_HEIGHT / 2)
+  ctx.translate(Math.sin(s.time * 71) * s.cameraShake, Math.cos(s.time * 53) * s.cameraShake * .45)
   const cam = s.camera
   const area = getArea(s.player.x)
   const green = s.foundGreen
@@ -276,12 +440,38 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   if (s.secretFound && s.player.x > 6100 && s.player.x < 6300) { const secretX = 6145 - cam; ctx.fillStyle = "#171c18"; ctx.fillRect(secretX - 32, 378, 64, 77); ctx.fillStyle = "#a7ba77"; ctx.beginPath(); ctx.arc(secretX, 399, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ddd4bb"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("MEMÓRIA 01", secretX, 369) }
 
   // Inimigos com silhuetas diferentes.
-  for (const e of s.enemies) { if (!e.alive) continue; const x = e.x - cam; if (x < -80 || x > VIEW_WIDTH + 80) continue; drawEnemy(ctx, e, x, s.time) }
+  for (const e of s.enemies) { if (!e.alive) continue; const x = e.x - cam; if (x < -80 || x > VIEW_WIDTH + 80) continue; drawEnemy(ctx, e, x, s.time); if (DEBUG_COMBAT) { ctx.strokeStyle = "#65e2c1"; ctx.lineWidth = 1; ctx.strokeRect(x - 23, e.y - 30, 46, 52) } }
   // O Colosso prepara ataques com sinais visuais antes de cada impacto.
   if (!s.bossWon && s.player.x > 4950) drawColossus(ctx, s.boss, s.boss.x - cam, s.time)
   const p = s.player, px = p.x - cam, py = p.y
   if (!(p.invulnerable > 0 && Math.floor(s.time * 18) % 2 === 0)) drawCaco(ctx, px + 18, py + 42, p, s.time, s.flowerBloomed, s.deathTimer)
-  if (p.attack > 0) { ctx.strokeStyle = p.attackId % 2 === 0 ? "#f4d087" : "#f29b62"; ctx.lineWidth = 3; ctx.globalAlpha = Math.min(.8, p.attack * 4); ctx.beginPath(); ctx.arc(px + 18 + p.facing * 25, py + 22, p.attackId % 2 === 0 ? 35 : 28, p.facing < 0 ? Math.PI * .63 : -Math.PI * .63, p.facing < 0 ? Math.PI * 1.37 : Math.PI * .63); ctx.stroke(); ctx.globalAlpha = 1 }
+  if (p.attack > 0) {
+    const angle = p.attackDirection === "right" ? 0 : p.attackDirection === "left" ? Math.PI : p.attackDirection === "up" ? -Math.PI / 2 : Math.PI / 2
+    ctx.save(); ctx.translate(px + 18, py + 22); ctx.rotate(angle)
+    ctx.strokeStyle = p.comboStep === 3 ? "#fff0bc" : "#f4d087"; ctx.lineWidth = p.comboStep === 3 ? 4 : 2.5
+    ctx.globalAlpha = p.attackPhase === "active" ? .82 : .3
+    ctx.beginPath(); ctx.arc(31, 0, p.comboStep === 3 ? 43 : 36, -.92, .92); ctx.stroke()
+    if (p.comboStep === 3) { ctx.globalAlpha *= .38; ctx.beginPath(); ctx.arc(31, 0, 50, -.72, .72); ctx.stroke() }
+    ctx.restore(); ctx.globalAlpha = 1
+  }
+  if (p.pulseEffect > 0) {
+    const progress = 1 - p.pulseEffect / .42
+    ctx.save(); ctx.translate(px + 18, py + 22); ctx.globalAlpha = Math.max(0, 1 - progress)
+    ctx.strokeStyle = "#e8bb70"; ctx.lineWidth = 2
+    for (let ring = 0; ring < 2; ring++) { ctx.beginPath(); ctx.arc(0, 0, 30 + progress * (120 + ring * 18), 0, Math.PI * 2); ctx.stroke() }
+    ctx.restore(); ctx.globalAlpha = 1
+  }
+  for (const particle of s.particles) {
+    ctx.globalAlpha = Math.max(0, particle.life / particle.maxLife)
+    ctx.fillStyle = particle.color; ctx.fillRect(particle.x - cam, particle.y, particle.size, particle.size)
+  }
+  ctx.globalAlpha = 1
+  if (DEBUG_COMBAT) {
+    ctx.save(); ctx.strokeStyle = "#65e2c1"; ctx.lineWidth = 1; ctx.strokeRect(px + 6, py + 2, 24, 40)
+    if (p.attackPhase === "active") { ctx.strokeStyle = "#ff7765"; ctx.strokeRect(px + 18 - (p.attackDirection === "left" ? 100 : p.attackDirection === "right" ? -4 : 36), py + 22 - (p.attackDirection === "up" ? 150 : p.attackDirection === "down" ? -7 : 58), p.attackDirection === "left" || p.attackDirection === "right" ? 104 : 116, p.attackDirection === "up" || p.attackDirection === "down" ? 142 : 116) }
+    ctx.fillStyle = "#dcf0d8"; ctx.font = "10px monospace"; ctx.fillText(`ESTADO ${p.attackPhase} · ${p.attackDirection} · V ${Math.round(p.vx)},${Math.round(p.vy)} · N ${p.energy.toFixed(1)} · DASH ${p.dashCooldown.toFixed(1)} · PULSO ${p.pulseCooldown.toFixed(1)}`, 14, 22)
+    ctx.restore()
+  }
   // Poeira, partículas e faíscas ambientais.
   for (let i = 0; i < 36; i++) { const x = (i * 109 + s.time * (11 + i % 5) - cam * 0.2) % VIEW_WIDTH; const y = (i * 71 + s.time * (8 + i % 4)) % 430; ctx.fillStyle = i % 9 === 0 ? "rgba(215,137,73,.65)" : "rgba(190,184,158,.25)"; ctx.beginPath(); ctx.arc(x, y, i % 9 === 0 ? 1.7 : 1, 0, Math.PI * 2); ctx.fill() }
   ctx.fillStyle = "rgba(0,0,0,.22)"; const vignette = ctx.createRadialGradient(480, 250, 145, 480, 250, 560); vignette.addColorStop(0, "rgba(0,0,0,0)"); vignette.addColorStop(1, "rgba(0,0,0,.56)"); ctx.fillStyle = vignette; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
@@ -293,7 +483,7 @@ function drawCaco(ctx: CanvasRenderingContext2D, x: number, footY: number, playe
   const moving = Math.abs(player.vx) > 35 && player.grounded && player.dash <= 0
   const stride = moving ? Math.sin(time * (Math.abs(player.vx) > 260 ? 17 : 11)) * .52 : 0
   const bob = player.sitting ? 0 : player.grounded ? Math.abs(Math.sin(time * 7)) * .9 : 0
-  const attackProgress = player.attack > 0 ? 1 - player.attack / .4 : 0
+  const attackProgress = player.attack > 0 ? Math.max(0, 1 - player.attack / .3) : 0
   const fall = deathTimer > 0 ? (0.78 - deathTimer) / 0.78 : 0
   ctx.save(); ctx.translate(x, footY + bob + (player.sitting ? 5 : 0)); ctx.rotate(-fall * 1.05); ctx.scale(player.facing, 1)
   if (player.dash > 0) { for (let i = 1; i <= 3; i++) { ctx.globalAlpha = .18 / i; polygon(ctx, [[-18 - i * 9, -52], [-5 - i * 9, -61], [8 - i * 9, -54], [9 - i * 9, -8], [-17 - i * 9, -10]], i === 1 ? "#dda85e" : "#a9b2a2", "") } ctx.globalAlpha = 1 }
@@ -310,7 +500,7 @@ function drawCaco(ctx: CanvasRenderingContext2D, x: number, footY: number, playe
     ctx.restore()
   }
   // Asymmetric scrap torso, shoulder plates, fasteners and amber chest slit.
-  const lean = player.dash > 0 ? -.58 : player.vy < -80 ? -.12 : moving ? -.08 : 0
+  const lean = player.dash > 0 ? -.58 : player.attack > 0 && player.attackDirection === "up" ? -.2 : player.attack > 0 && player.attackDirection === "down" ? .18 : player.vy < -80 ? -.12 : moving ? -.08 : 0
   ctx.save(); ctx.translate(0,-30); ctx.rotate(lean)
   polygon(ctx, [[-12,-19],[7,-17],[14,-8],[11,9],[2,16],[-12,10],[-17,-4]], "#675746", "#1f1b17")
   polygon(ctx, [[-11,-16],[1,-17],[5,-5],[-9,-2],[-15,-8]], "#b27345", "#35251b")
@@ -320,7 +510,7 @@ function drawCaco(ctx: CanvasRenderingContext2D, x: number, footY: number, playe
   for (const [bx,by] of [[-12,-10],[8,-8],[-7,7],[8,9]] as [number,number][]) { ctx.fillStyle="#d0b98d"; ctx.beginPath(); ctx.arc(bx,by,1.15,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#514536"; ctx.fillRect(bx-.3,by-.3,.6,.6) }
   // Left arm counterbalances the blade arm; each joint swings with the gait.
   ctx.save(); ctx.translate(-12,-12); ctx.rotate(-.16 - stride * .8); polygon(ctx, [[-3,-2],[4,-1],[7,8],[1,15],[-5,9]], "#615441"); polygon(ctx, [[-4,10],[4,11],[5,16],[-3,18]], "#a55c37"); ctx.restore()
-  const swingAngle = player.attack > 0 ? (player.attackId % 2 === 0 ? -1.25 + attackProgress * 2.25 : .85 - attackProgress * 2.5) : .12 + stride * .9
+  const swingAngle = player.attack <= 0 ? .12 + stride * .9 : player.attackDirection === "up" ? -2.45 + attackProgress * .8 : player.attackDirection === "down" ? .78 + attackProgress * .62 : player.comboStep === 3 ? -1.8 + attackProgress * 3.1 : player.comboStep === 2 ? .95 - attackProgress * 2.6 : -.95 + attackProgress * 2.35
   ctx.save(); ctx.translate(9,-12); ctx.rotate(swingAngle); polygon(ctx, [[-3,-3],[5,-2],[7,8],[2,14],[-4,9]], "#ad6540"); ctx.fillStyle="#8f6c4b"; ctx.beginPath(); ctx.arc(2,10,2.6,0,Math.PI*2); ctx.fill()
   // The improvised blade is attached to this rotating forearm.
   polygon(ctx, [[0,11],[4,10],[7,24],[17,39],[11,42],[2,28]], player.attack > 0 ? "#d5c8a3" : "#9c9883", "#342b21"); polygon(ctx, [[7,24],[17,39],[12,37]], "#e9d6a8", "")
@@ -341,6 +531,7 @@ function drawCaco(ctx: CanvasRenderingContext2D, x: number, footY: number, playe
   if (player.dash > 0) { ctx.fillStyle="#ffb256"; ctx.shadowColor="#ff8a36"; ctx.shadowBlur=14; ctx.beginPath(); ctx.arc(-18,-28,2,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0 }
   if (deathTimer > 0) { ctx.globalAlpha = Math.max(.25, deathTimer / .78); polygon(ctx,[[18,-41],[25,-47],[29,-39],[23,-33]],"#9b6841",""); polygon(ctx,[[-14,-26],[-22,-31],[-19,-23],[-12,-19]],"#6e5a45",""); ctx.globalAlpha = 1 }
   if (player.invulnerable > .7 && Math.floor(time * 23) % 3 === 0) { for (let i=0;i<3;i++){ctx.fillStyle=i%2?"#e7ae63":"#f4d18b";ctx.beginPath();ctx.moveTo(15+i*4,-45-i*3);ctx.lineTo(21+i*5,-53-i*2);ctx.lineTo(17+i*3,-43-i*4);ctx.fill()} }
+  if (player.hurtFlash > 0) { ctx.globalAlpha = Math.min(.42, player.hurtFlash * 1.8); ctx.strokeStyle = "#fff1ca"; ctx.lineWidth = 3; ctx.strokeRect(-17, -61, 34, 60); ctx.globalAlpha = 1 }
   ctx.restore()
 }
 
@@ -363,8 +554,9 @@ function drawEnemy(ctx: CanvasRenderingContext2D, e: Enemy, x: number, time: num
     polygon(ctx,[[-14,3],[-10,-7],[-3,-12],[9,-9],[15,1],[10,10],[-8,11]],"#75553b");polygon(ctx,[[-3,-10],[7,-15],[13,-6],[5,0]],"#b66c3d");
     for(const ex of [-4,5]){ctx.fillStyle="#f2a250";ctx.shadowColor="#d87939";ctx.shadowBlur=5;ctx.fillRect(ex,0,3,3)}ctx.shadowBlur=0
   }
+  if ((e.hitFlash ?? 0) > 0) { ctx.globalAlpha = Math.min(.68, (e.hitFlash ?? 0) * 4); ctx.fillStyle = "#fff0c8"; ctx.fillRect(-29, -32, 58, 56); ctx.globalAlpha = 1 }
   ctx.restore()
-  ctx.fillStyle="#211e1b";ctx.fillRect(x-17,y-25,34,3);ctx.fillStyle="#c76c43";ctx.fillRect(x-17,y-25,34*(e.hp/e.maxHp),3)
+  ctx.fillStyle="#211e1b";ctx.fillRect(x-17,y-25,34,3);ctx.fillStyle=(e.hitFlash ?? 0) > 0 ? "#fff0c8" : "#c76c43";ctx.fillRect(x-17,y-25,34*(e.hp/e.maxHp),3)
 }
 
 function drawColossus(ctx: CanvasRenderingContext2D, boss: GameState["boss"], x: number, time: number) {
