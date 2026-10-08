@@ -13,7 +13,7 @@ const coreModuleInfo = [
   { id: "raiz", name: "Raiz", detail: "Permite despertar a flor adormecida com o Pulso." },
 ]
 
-const keysFor = { a: "ESQUERDA", d: "DIREITA", space: "PULAR", shift: "DASH", j: "ATACAR", k: "PULSO", l: "LANÇAR MÓDULO", e: "INTERAGIR", i: "INVENTÁRIO", m: "MAPA", escape: "PAUSAR" }
+const keysFor = { a: "ESQUERDA", d: "DIREITA", w: "MIRAR PARA CIMA", s: "MIRAR PARA BAIXO", space: "PULAR", shift: "DASH", j: "ATACAR", k: "PULSO", r: "LANÇAR MÓDULO", e: "INTERAGIR", i: "INVENTÁRIO", m: "MAPA", escape: "PAUSAR" }
 type Screen = "title" | "playing" | "pause" | "inventory" | "map" | "modules" | "death" | "cinematic" | "gallery" | "options" | "ending"
 type Panel = "itens" | "habilidades" | "diário"
 
@@ -36,6 +36,7 @@ export default function ScrapboundGame() {
   const [showControls, setShowControls] = useState(false)
   const audioRef = useRef<AudioContext | null>(null)
   const world = gameRef.current
+  const biomeIndex = world ? Math.max(0, AREAS.findIndex((area) => world.player.x >= area.start && world.player.x < area.end)) : 0
 
   const changeScreen = useCallback((next: Screen) => { screenRef.current = next; setScreen(next) }, [])
   useEffect(() => { const saved = loadSavedState(); setHasSave(Boolean(saved)); setHasSeenIntro(Boolean(saved?.introSeen)) }, [])
@@ -83,19 +84,34 @@ export default function ScrapboundGame() {
       const audio = audioRef.current ?? new AudioContextClass()
       audioRef.current = audio
       if (audio.state === "suspended") void audio.resume()
-      const greenDiscovered = Boolean(gameRef.current?.forestEntered)
+      const soundscapes = [
+        { filter: 180, low: 49, upper: 73.42 },
+        { filter: 280, low: 55, upper: 82.41 },
+        { filter: 360, low: 65.41, upper: 98 },
+        { filter: 240, low: 46.25, upper: 69.3 },
+        { filter: 420, low: 51.91, upper: 77.78 },
+        { filter: 560, low: 58.27, upper: 87.31 },
+        { filter: 760, low: 65.41, upper: 98 },
+        { filter: 1120, low: 73.42, upper: 110 },
+        { filter: 520, low: 49, upper: 73.42 },
+        { filter: 840, low: 58.27, upper: 87.31 },
+        { filter: 220, low: 41.2, upper: 61.74 },
+        { filter: 150, low: 36.71, upper: 55 },
+        { filter: 310, low: 43.65, upper: 65.41 },
+      ]
+      const soundscape = soundscapes[biomeIndex] ?? soundscapes[0]
       const bed = audio.createGain()
       const low = audio.createOscillator()
       const upper = audio.createOscillator()
       const filter = audio.createBiquadFilter()
       filter.type = "lowpass"
-      filter.frequency.value = greenDiscovered ? 1100 : 180
+      filter.frequency.value = soundscape.filter
       bed.gain.setValueAtTime(.0001, audio.currentTime)
       bed.gain.exponentialRampToValueAtTime(.012, audio.currentTime + 1.4)
       low.type = "sine"
-      low.frequency.value = greenDiscovered ? 73.42 : 49
+      low.frequency.value = soundscape.low
       upper.type = "sine"
-      upper.frequency.value = greenDiscovered ? 110 : 73.42
+      upper.frequency.value = soundscape.upper
       low.connect(filter); upper.connect(filter); filter.connect(bed); bed.connect(audio.destination)
       low.start(); upper.start()
       return () => {
@@ -105,7 +121,7 @@ export default function ScrapboundGame() {
         low.stop(now + .7); upper.stop(now + .7)
       }
     } catch { /* a paisagem sonora depende do suporte de áudio do navegador */ }
-  }, [screen, sound, world?.forestEntered])
+  }, [screen, sound, biomeIndex])
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
@@ -146,7 +162,7 @@ export default function ScrapboundGame() {
       if (key === " " || key in keysFor || key.startsWith("arrow")) keysRef.current.add(key === " " ? "space" : key)
       if (key === "j" && !event.repeat) { keysRef.current.add("_attackPressed"); playTone(240, .08, "sawtooth") }
       if (key === "k" && !event.repeat) keysRef.current.add("_pulsePressed")
-      if (key === "l" && !event.repeat) { keysRef.current.add("_powerPressed"); playTone(520, .07, "square") }
+      if (key === "r" && !event.repeat) { keysRef.current.add("_powerPressed"); playTone(520, .07, "square") }
       if (key === " " && !event.repeat) { keysRef.current.add("_jumpPressed"); playTone(330, .11) }
       if (key === "shift" && !event.repeat) { keysRef.current.add("_dashPressed"); playTone(130, .13, "square") }
     }
@@ -210,7 +226,7 @@ export default function ScrapboundGame() {
     if (key === "j") keysRef.current.add("_attackPressed")
     if (key === "space") keysRef.current.add("_jumpPressed")
     if (key === "k") keysRef.current.add("_pulsePressed")
-    if (key === "l") keysRef.current.add("_powerPressed")
+    if (key === "r") keysRef.current.add("_powerPressed")
     if (key === "shift") keysRef.current.add("_dashPressed")
   }
   const releaseControl = (key: string) => () => keysRef.current.delete(key)
@@ -232,7 +248,7 @@ export default function ScrapboundGame() {
         </header>
 
         <section className="game-screen" aria-label="Jogo SCRAPBOUND">
-          <canvas ref={canvasRef} className="game-canvas" width={VIEW_WIDTH} height={VIEW_HEIGHT} onPointerDown={(event) => { if (event.button !== 0 || screenRef.current !== "playing" || gameRef.current?.dialogue) return; keysRef.current.add("mouse"); keysRef.current.add("_attackPressed"); window.setTimeout(() => keysRef.current.delete("mouse"), 90); playTone(240, .08, "sawtooth") }} aria-label="Mundo jogável de Scrapbound. Use A e D para andar, espaço para pular, J para atacar na direção indicada, K para liberar o Pulso e E para interagir." />
+          <canvas ref={canvasRef} className="game-canvas" width={VIEW_WIDTH} height={VIEW_HEIGHT} onPointerDown={(event) => { if (event.button !== 0 || screenRef.current !== "playing" || gameRef.current?.dialogue) return; keysRef.current.add("mouse"); keysRef.current.add("_attackPressed"); window.setTimeout(() => keysRef.current.delete("mouse"), 90); playTone(240, .08, "sawtooth") }} aria-label="Mundo jogável de Scrapbound. Use A e D para andar, espaço para pular, W, A, S ou D com J para ataques direcionais, K para liberar o Pulso, R para lançar sucata e E para interagir." />
 
           {world && <>
             <div className="hud-top">
@@ -240,13 +256,14 @@ export default function ScrapboundGame() {
               <div className="hud-area"><span className="area-overline">SETOR ATUAL</span><span>{getArea(world.player.x).name}</span>{subarea && <small className="hud-subarea">{subarea}</small>}{world.layer === "underworks" && <small className="hud-depth">CAMADA INFERIOR</small>}{world.layer === "oil" && <small className="hud-depth">PROFUNDEZAS SUBMERSAS</small>}</div>
               <div className="hud-currency"><Coins size={15} /><span>{world.player.screws.toString().padStart(3, "0")}</span><small>PARAFUSOS</small></div>
             </div>
-            <div className={`hud-energy ${world.player.energy >= (getCoreCapacity(world)) ? "energy-full" : ""}`} aria-label={`Energia do Núcleo: ${world.player.energy.toFixed(1)} de ${getCoreCapacity(world)}`}><span className="hud-label">NÚCLEO</span>{Array.from({ length: getCoreCapacity(world) }, (_, i) => <i key={i} className={i < Math.floor(world.player.energy) ? "charged" : ""} />)}<span className="energy-count">{Math.floor(world.player.energy)}/{getCoreCapacity(world)}</span>{world.bossWon && <button className="pulse-button" disabled={world.player.energy < 1 || world.player.pulseCooldown > 0} onPointerDown={pressControl("k")} onPointerUp={releaseControl("k")} onPointerCancel={releaseControl("k")} aria-label="Liberar Pulso, tecla K">PULSO <kbd>K</kbd></button>}{world.unlockedModules.length > 0 && <button className="pulse-button modules-open" onClick={() => changeScreen("modules")} aria-label="Abrir módulos do Núcleo">MÓDULOS</button>}{world.equippedModules.includes("lancador") && <button className="pulse-button power-button" disabled={world.player.moduleCharges < 1 || world.player.energy < .5} onPointerDown={pressControl("l")} onPointerUp={releaseControl("l")} onPointerCancel={releaseControl("l")} aria-label={`Disparar Lançador de Sucata, ${world.player.moduleCharges} cargas, tecla L`}>SUCATA {world.player.moduleCharges}/3 <kbd>L</kbd></button>}</div>
+            <div className={`hud-energy ${world.player.energy >= (getCoreCapacity(world)) ? "energy-full" : ""}`} aria-label={`Energia do Núcleo: ${world.player.energy.toFixed(1)} de ${getCoreCapacity(world)}`}><span className="hud-label">NÚCLEO</span>{Array.from({ length: getCoreCapacity(world) }, (_, i) => <i key={i} className={i < Math.floor(world.player.energy) ? "charged" : ""} />)}<span className="energy-count">{Math.floor(world.player.energy)}/{getCoreCapacity(world)}</span>{world.bossWon && <button className="pulse-button" disabled={world.player.energy < 1 || world.player.pulseCooldown > 0} onPointerDown={pressControl("k")} onPointerUp={releaseControl("k")} onPointerCancel={releaseControl("k")} aria-label="Liberar Pulso, tecla K">PULSO <kbd>K</kbd></button>}{world.unlockedModules.length > 0 && <button className="pulse-button modules-open" onClick={() => changeScreen("modules")} aria-label="Abrir módulos do Núcleo">MÓDULOS</button>}{world.equippedModules.includes("lancador") && <button className="pulse-button power-button" disabled={world.player.moduleCharges < 1 || world.player.energy < .5} onPointerDown={pressControl("r")} onPointerUp={releaseControl("r")} onPointerCancel={releaseControl("r")} aria-label={`Disparar Lançador de Sucata, ${world.player.moduleCharges} de 3 cargas, tecla R`}>LANÇADOR {world.player.moduleCharges}/3 <kbd>R</kbd><span className="charge-meter" aria-label={world.player.moduleCharges < 3 ? "Recarga em andamento" : "Carga completa"}><i style={{ width: `${world.player.moduleCharges >= 3 ? 100 : Math.max(0, ((2.8 - world.player.moduleRecharge) / 2.8) * 100)}%` }} /></span></button>}</div>
             <div className="hud-location"><span className="location-rule" /><span>{world.layer === "underworks" ? "TÚNEIS DE FERRUGEM · SUBNÍVEL" : world.layer === "oil" ? "PROFUNDEZAS DO ÓLEO · CIDADE SUBMERSA" : subarea || getArea(world.player.x).name.toUpperCase()}</span><span className="location-rule" /></div>
             {world.storyStage >= 3 && <div className="story-objective"><small>MISSÃO PRINCIPAL</small><span>Descubra por que Caco foi criado.</span></div>}
             {world.tutorialHintTimer > 0 && screen === "playing" && !world.dialogue && <div className="tutorial-hint" role="status"><span className="tutorial-dot" />{world.tutorialHint}</div>}
             {world.vistaMoment > 0 && <div className="vista-overlay" aria-live="polite"><span>TORRE DE OBSERVAÇÃO</span><strong>O mundo não termina aqui.</strong><small>ÁREA DE RECUPERAÇÃO · SUPERFÍCIE</small></div>}
             <div className="hud-compass"><span>N</span><div className="compass-track"><i style={{ left: `${Math.max(1, Math.min(98, (world.player.x / WORLD_WIDTH) * 100))}%` }} /></div><span>SUPERFÍCIE</span><button onClick={toggleMobileMap} aria-label="Abrir mapa"><Map size={14} /></button></div>
             {world.toastTimer > 0 && <div className="game-toast" role="status"><Sparkles size={14} />{world.toast}</div>}
+            {world.moduleMoment > 0 && <div className="module-acquisition" role="status" aria-live="assertive"><span>RESSONÂNCIA DA FORJA</span><strong>{world.moduleMoment > 3.8 ? "A PEÇA DESPERTA" : world.moduleMoment > 1.45 ? "LANÇADOR DE SUCATA" : "PRIMEIRO DISPARO"}</strong><div className="module-orbit" aria-hidden="true"><i /><b /><em /></div><small>{world.moduleMoment > 1.45 ? "O Núcleo integra o mecanismo ao braço de Caco." : "Uma peça metálica corta o ar e atinge a parede."}</small></div>}
             {world.dialogue && <div className="dialogue-box"><div className="dialogue-name">{world.dialogue.name}</div><p>{world.dialogue.lines[Math.min(world.dialogue.index, world.dialogue.lines.length - 1)]}</p>{world.dialogue.shop && <div className="dialogue-shop">{upgradeInfo.map((upgrade) => <button key={upgrade.id} onClick={() => handleAction("buy", upgrade.id)} disabled={world.upgrades.includes(upgrade.id) || world.player.screws < upgrade.cost}><span>{upgrade.name}</span><small>{world.upgrades.includes(upgrade.id) ? "INSTALADA" : `${upgrade.cost} PARAFUSOS`}</small></button>)}</div>}<button className="dialogue-continue" onClick={() => handleAction("dialogue-next")}>CONTINUAR <ChevronRight size={14} /></button></div>}
           </>}
 
@@ -276,7 +293,7 @@ export default function ScrapboundGame() {
 
         <footer className="game-footer"><div className="footer-right"><span>ABISMO <i>·</i> SETOR {world ? String(AREAS.indexOf(getArea(world.player.x)) + 1).padStart(2, "0") : "01"}</span><span className="save-status"><span /> {world?.savePulse ? "SALVANDO" : "AUTOSAVE"}</span></div></footer>
       </div>
-      {screen === "playing" && <div className="mobile-controls" aria-label="Controles de toque"><div className="mobile-move"><button onPointerDown={pressControl("a")} onPointerUp={releaseControl("a")} onPointerCancel={releaseControl("a")} aria-label="Mover para esquerda"><ArrowLeft /></button><button onPointerDown={pressControl("d")} onPointerUp={releaseControl("d")} onPointerCancel={releaseControl("d")} aria-label="Mover para direita"><ArrowRight /></button></div><div className="mobile-actions"><button onPointerDown={pressControl("j")} onPointerUp={releaseControl("j")} onPointerCancel={releaseControl("j")} aria-label="Atacar">J</button><button onPointerDown={pressControl("space")} onPointerUp={releaseControl("space")} onPointerCancel={releaseControl("space")} aria-label="Pular"><ArrowUp /></button><button onPointerDown={pressControl("shift")} onPointerUp={releaseControl("shift")} onPointerCancel={releaseControl("shift")} aria-label="Dash">D</button><button onClick={toggleMobileMap} aria-label="Abrir mapa"><Map size={17} /></button></div><div className="mobile-aim" aria-label="Direção do golpe"><button onPointerDown={pressControl("arrowup")} onPointerUp={releaseControl("arrowup")} onPointerCancel={releaseControl("arrowup")} aria-label="Mirar para cima"><ArrowUp size={15} /></button><button onPointerDown={pressControl("arrowdown")} onPointerUp={releaseControl("arrowdown")} onPointerCancel={releaseControl("arrowdown")} aria-label="Mirar para baixo"><ArrowDown size={15} /></button></div></div>}
+      {screen === "playing" && <div className="mobile-controls" aria-label="Controles de toque"><div className="mobile-move"><button onPointerDown={pressControl("a")} onPointerUp={releaseControl("a")} onPointerCancel={releaseControl("a")} aria-label="Mover para esquerda"><ArrowLeft /></button><button onPointerDown={pressControl("d")} onPointerUp={releaseControl("d")} onPointerCancel={releaseControl("d")} aria-label="Mover para direita"><ArrowRight /></button></div><div className="mobile-actions"><button onPointerDown={pressControl("j")} onPointerUp={releaseControl("j")} onPointerCancel={releaseControl("j")} aria-label="Atacar">J</button><button onPointerDown={pressControl("space")} onPointerUp={releaseControl("space")} onPointerCancel={releaseControl("space")} aria-label="Pular"><ArrowUp /></button><button onPointerDown={pressControl("shift")} onPointerUp={releaseControl("shift")} onPointerCancel={releaseControl("shift")} aria-label="Dash">D</button>{world?.equippedModules.includes("lancador") && <button onPointerDown={pressControl("r")} onPointerUp={releaseControl("r")} onPointerCancel={releaseControl("r")} aria-label="Lançar sucata">R</button>}<button onClick={toggleMobileMap} aria-label="Abrir mapa"><Map size={17} /></button></div><div className="mobile-aim" aria-label="Direção do golpe"><button onPointerDown={pressControl("arrowup")} onPointerUp={releaseControl("arrowup")} onPointerCancel={releaseControl("arrowup")} aria-label="Mirar para cima"><ArrowUp size={15} /></button><button onPointerDown={pressControl("arrowdown")} onPointerUp={releaseControl("arrowdown")} onPointerCancel={releaseControl("arrowdown")} aria-label="Mirar para baixo"><ArrowDown size={15} /></button></div></div>}
       <div className="page-caption"><span>UMA HISTÓRIA SOBRE O QUE RESTA</span><span>EXPLORE NO SEU RITMO</span></div>
     </main>
   )
@@ -287,7 +304,7 @@ function OverlayCard({ eyebrow, title, onClose, children }: { eyebrow: string; t
 }
 
 function Controls({ onClose }: { onClose: () => void }) {
-  return <div className="controls-card"><div className="controls-head"><span>MANUAL DO OPERADOR</span><button onClick={onClose} aria-label="Fechar controles"><X size={15} /></button></div><div className="controls-grid">{[["A / D", "MOVER"], ["ESPAÇO", "PULAR"], ["SHIFT", "DASH"], ["J / CLIQUE", "ATACAR"], ["W / A / S / D", "DIREÇÃO DO GOLPE"], ["K", "PULSO"], ["L", "LANÇAR MÓDULO"], ["E", "INTERAGIR"], ["I", "INVENTÁRIO"], ["M", "MAPA"], ["ESC", "PAUSAR"]].map(([key, value]) => <span key={key}><kbd>{key}</kbd><small>{value}</small></span>)}</div><p>Segure uma direção e ataque para escolher o golpe. No ar, ataque para baixo para rebater em inimigos. Acertos recuperam Núcleo; K libera o Pulso após a Fornalha.</p></div>
+  return <div className="controls-card"><div className="controls-head"><span>MANUAL DO OPERADOR</span><button onClick={onClose} aria-label="Fechar controles"><X size={15} /></button></div><div className="controls-grid">{[["A / D", "MOVER"], ["ESPAÇO", "PULAR"], ["SHIFT", "DASH"], ["J / CLIQUE", "ATACAR"], ["W / A / S / D", "MIRAR · J ATACA"], ["K", "PULSO"], ["R", "LANÇAR MÓDULO"], ["E", "INTERAGIR"], ["I", "INVENTÁRIO"], ["M", "MAPA"], ["ESC", "PAUSAR"]].map(([key, value]) => <span key={key}><kbd>{key}</kbd><small>{value}</small></span>)}</div><p>Segure uma direção e ataque para escolher o golpe. No ar, ataque para baixo para rebater em inimigos. Acertos recuperam Núcleo; K libera o Pulso após a Fornalha.</p></div>
 }
 
 function IntroCinematic({ soundEnabled, onComplete }: { soundEnabled: boolean; onComplete: () => void }) {

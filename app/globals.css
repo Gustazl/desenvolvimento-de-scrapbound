@@ -284,8 +284,10 @@
   .pulse-button { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; padding: 4px 6px; border: 1px solid #96764f; background: #33291d; color: #e9c38a; font: 8px monospace; letter-spacing: .08em; cursor: pointer; }
   .pulse-button kbd { padding: 2px 3px; border: 1px solid #7f694a; color: #f3e4c4; font: 8px monospace; }
   .pulse-button:disabled { opacity: .45; cursor: not-allowed; }
-.power-button { border-color: #a49c80; background: linear-gradient(135deg, #37372f, #292821); color: #e3d7b6; }
+.power-button { position: relative; border-color: #a49c80; background: linear-gradient(135deg, #37372f, #292821); color: #e3d7b6; }
 .power-button kbd { border-color: #92896d; color: #fff1c3; }
+.charge-meter { position: absolute; right: 4px; bottom: -4px; left: 4px; height: 2px; overflow: hidden; background: #151713; }
+.charge-meter i { display: block; height: 100%; background: #dfb76d; box-shadow: 0 0 5px #dfb76d; transition: width .12s linear; }
   .mobile-aim { display: none; }
   .core-module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
   .core-module-card { min-height: 104px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 11px; border: 1px solid #51483a; background: linear-gradient(135deg, #292921, #20211d); color: #ddd1b8; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
@@ -298,6 +300,19 @@
   @media (max-width: 760px) { .hud-energy { gap: 5px; }.energy-count { font-size: 6px; }.pulse-button { padding: 3px 4px; font-size: 6px; }.pulse-button kbd { font-size: 6px; }.modules-open { font-size: 5px; }.mobile-aim { position: fixed; right: 12px; bottom: 105px; z-index: 20; display: flex; flex-direction: column; gap: 5px; }.mobile-aim button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #88714e99; border-radius: 50%; background: #24241fd9; color: #ead7b5; touch-action: none; } }
 @media (max-width: 420px) { .core-module-grid { grid-template-columns: 1fr; max-height: 46vh; overflow-y: auto; }.core-module-card { min-height: 84px; } }
   @media (max-height: 620px) and (min-width: 761px) { .scrap-shell { padding-top: 10px; padding-bottom: 8px; }.game-topbar { height: 45px; }.game-footer { height: 34px; }.page-caption { margin-top: 8px; } }
+.module-acquisition { position: absolute; z-index: 7; top: 50%; left: 50%; display: grid; justify-items: center; gap: 10px; width: min(330px, 82%); padding: 16px 20px 14px; transform: translate(-50%, -50%); border: 1px solid #b18557; background: linear-gradient(145deg, #28261feF, #131713f2); box-shadow: 0 12px 50px #000a, inset 0 0 30px #d7a85b12; text-align: center; animation: module-arrive .42s ease-out both; pointer-events: none; }
+.module-acquisition > span { color: #c39665; font: 8px monospace; letter-spacing: .2em; }
+.module-acquisition > strong { color: #f0dfbd; font: 17px Georgia, serif; letter-spacing: .08em; }
+.module-acquisition > small { color: #c2b8a3; font: 10px/1.5 Arial, sans-serif; }
+.module-orbit { position: relative; width: 54px; height: 54px; display: grid; place-items: center; border: 1px solid #9e8058; border-radius: 50%; box-shadow: 0 0 23px #e0ab5b36, inset 0 0 18px #e0ab5b20; animation: core-breathe 1.8s ease-in-out infinite; }
+.module-orbit::before, .module-orbit::after { position: absolute; inset: 7px; border: 1px solid #b18d5c66; border-radius: 50%; content: ""; }
+.module-orbit::after { inset: 18px; background: #f0bd70; box-shadow: 0 0 18px #ffc76e; }
+.module-orbit i, .module-orbit b, .module-orbit em { position: absolute; width: 7px; height: 7px; background: #c9c0a8; border: 1px solid #f2d79b; transform: rotate(45deg); animation: module-fragment 2.8s ease-in-out infinite; }
+.module-orbit i { top: -8px; left: 23px; }.module-orbit b { right: -5px; bottom: 9px; animation-delay: -.7s; }.module-orbit em { left: -4px; bottom: 11px; animation-delay: -1.3s; }
+@keyframes module-arrive { from { opacity: 0; filter: blur(5px); } to { opacity: 1; filter: blur(0); } }
+@keyframes core-breathe { 50% { transform: scale(1.06); box-shadow: 0 0 32px #e0ab5b66, inset 0 0 22px #e0ab5b33; } }
+@keyframes module-fragment { 50% { transform: translateY(-5px) rotate(135deg); } }
+.power-button { min-width: max-content; }
 
 .cinematic-hidden { display: none !important; }
 .game-frame:has(.cinematic-overlay) .game-footer, .scrap-shell:has(.cinematic-overlay) .page-caption { display: none; }

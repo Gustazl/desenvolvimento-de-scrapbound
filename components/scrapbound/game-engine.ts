@@ -5,8 +5,8 @@ export type Enemy = { id: number; kind: EnemyKind; x: number; y: number; vx: num
 export type Projectile = { x: number; y: number; vx: number; life: number }
 export type Dialogue = { name: string; lines: string[]; index: number; shop?: boolean }
 export type GameState = {
-  player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; attackDirection: AttackDirection; attackPhase: "idle" | "start" | "active" | "recovery"; comboStep: number; comboWindow: number; attackBuffer: number; jumpBuffer: number; coyoteTime: number; dash: number; dashCooldown: number; invulnerable: number; hurtFlash: number; pulseCooldown: number; pulseEffect: number; pogoCooldown: number; moduleCharges: number; moduleRecharge: number }
-  enemies: Enemy[]; projectiles: Projectile[]; unlockedModules: string[]; equippedModules: string[]; moduleSlots: number; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean; stage: number; weakWindow: number }
+  player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; attackDirection: AttackDirection; attackPhase: "idle" | "start" | "active" | "recovery"; comboStep: number; comboWindow: number; attackBuffer: number; jumpBuffer: number; coyoteTime: number; dash: number; dashCooldown: number; invulnerable: number; hurtFlash: number; pulseCooldown: number; pulseEffect: number; pogoCooldown: number; moduleCharges: number; moduleRecharge: number; moduleUse: number }
+  enemies: Enemy[]; projectiles: Projectile[]; unlockedModules: string[]; equippedModules: string[]; moduleSlots: number; moduleMoment: number; moduleDemoFired: boolean; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean; stage: number; weakWindow: number }
   deathTimer: number; camera: number; cameraZoom: number; time: number; hitStop: number; cameraShake: number; particles: HitParticle[]; checkpoint: number; foundGreen: boolean; forestEntered: boolean; forestMoment: number; vistaMoment: number; vistaSeen: boolean; flowerBloomed: boolean; projectRevealed: boolean; projectCutsceneSeen: boolean; storyStage: number; introSeen: boolean; recoveryAwakened: boolean; tutorialSeen: string[]; tutorialHint: string; tutorialHintTimer: number; secretFound: boolean; wallBroken: boolean; shortcut: boolean; richShortcut: boolean; bossWon: boolean; ferronMet: boolean; upgrades: string[]; dialogue: Dialogue | null; toast: string; toastTimer: number; savePulse: number
   forgePuzzleNodes: number[]; foundCoreFragments: number[]; coreFragments: number
   layer: "surface" | "underworks" | "oil"; cameraY: number; lowerWallHits: number; lowerWallHitBy: number; lowerWallBroken: boolean; relayActivated: boolean; tunnelMemoryFound: boolean; discoveredRooms: string[]
@@ -54,8 +54,8 @@ export const PLATFORMS = [
 
 export function createGameState(saved?: Partial<GameState>): GameState {
   const base: GameState = {
-    player: { x: 120, y: GROUND_Y - 42, vx: 0, vy: 0, hp: 5, maxHp: 5, energy: 3, screws: 12, facing: 1, grounded: false, sitting: false, attack: 0, attackId: 0, attackDirection: "right", attackPhase: "idle", comboStep: 0, comboWindow: 0, attackBuffer: 0, jumpBuffer: 0, coyoteTime: 0, dash: 0, dashCooldown: 0, invulnerable: 0, hurtFlash: 0, pulseCooldown: 0, pulseEffect: 0, pogoCooldown: 0, moduleCharges: 3, moduleRecharge: 0 },
-    unlockedModules: [], equippedModules: [], moduleSlots: 2,
+    player: { x: 120, y: GROUND_Y - 42, vx: 0, vy: 0, hp: 5, maxHp: 5, energy: 3, screws: 12, facing: 1, grounded: false, sitting: false, attack: 0, attackId: 0, attackDirection: "right", attackPhase: "idle", comboStep: 0, comboWindow: 0, attackBuffer: 0, jumpBuffer: 0, coyoteTime: 0, dash: 0, dashCooldown: 0, invulnerable: 0, hurtFlash: 0, pulseCooldown: 0, pulseEffect: 0, pogoCooldown: 0, moduleCharges: 3, moduleRecharge: 0, moduleUse: 0 },
+    unlockedModules: [], equippedModules: [], moduleSlots: 2, moduleMoment: 0, moduleDemoFired: false,
     enemies: [
       { id: 1, kind: "crawler", x: 650, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
       { id: 2, kind: "fly", x: 1020, y: 310, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
@@ -222,8 +222,11 @@ function fireModule(s: GameState) {
     setToast(s, p.moduleCharges <= 0 ? "Lançador recarregando." : "O módulo precisa estar equipado e o Núcleo carregado.")
     return
   }
+  showTutorial(s, "module-fire", "R — lançar sucata")
   p.moduleCharges -= 1
   p.moduleRecharge = p.moduleCharges < 3 ? 2.8 : 0
+  p.moduleUse = .28
+  p.sitting = false
   p.energy = Math.max(0, p.energy - .5)
   s.projectiles.push({ x: p.x + (p.facing > 0 ? 34 : 2), y: p.y + 20, vx: p.facing * 470, life: 2.2 })
   addSparks(s, p.x + (p.facing > 0 ? 32 : 4), p.y + 20)
@@ -234,6 +237,9 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   if (!Array.isArray(s.discoveredRooms)) s.discoveredRooms = ["area:0"]
   const p = s.player
   s.time += dt
+  const moduleWasActive = s.moduleMoment > 0
+  s.moduleMoment = Math.max(0, s.moduleMoment - dt)
+  if (moduleWasActive && s.moduleMoment === 0) showTutorial(s, "module-use", "R — lançar sucata")
   s.toastTimer = Math.max(0, s.toastTimer - dt)
   s.savePulse = Math.max(0, s.savePulse - dt)
   s.forestMoment = Math.max(0, s.forestMoment - dt)
@@ -257,7 +263,14 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   p.hurtFlash = Math.max(0, p.hurtFlash - dt)
   p.pulseCooldown = Math.max(0, p.pulseCooldown - dt)
   p.pulseEffect = Math.max(0, p.pulseEffect - dt)
+  p.moduleUse = Math.max(0, p.moduleUse - dt)
   p.energy = Math.min(getCoreCapacity(s), p.energy + dt * .1)
+  if (s.moduleMoment > 0 && s.moduleMoment <= 1.45 && !s.moduleDemoFired) {
+    s.moduleDemoFired = true
+    p.moduleUse = .28
+    s.projectiles.push({ x: p.x + (p.facing > 0 ? 34 : 2), y: p.y + 20, vx: p.facing * 470, life: 1.4 })
+    addSparks(s, p.x + (p.facing > 0 ? 32 : 4), p.y + 20, true)
+  }
   if (s.unlockedModules.includes("lancador") && p.moduleCharges < 3) {
     p.moduleRecharge -= dt
     if (p.moduleRecharge <= 0) { p.moduleCharges = Math.min(3, p.moduleCharges + 1); p.moduleRecharge = p.moduleCharges < 3 ? 2.8 : 0 }
@@ -270,7 +283,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   p.jumpBuffer = Math.max(0, p.jumpBuffer - dt)
   p.dash = Math.max(0, p.dash - dt)
   p.coyoteTime = p.grounded ? .12 : Math.max(0, p.coyoteTime - dt)
-  const scripted = s.forestMoment > 0 || s.vistaMoment > 0 || s.deathTimer > 0
+  const scripted = s.forestMoment > 0 || s.vistaMoment > 0 || s.deathTimer > 0 || s.moduleMoment > 0
   const left = !scripted && (keys.has("a") || keys.has("arrowleft"))
   const right = !scripted && (keys.has("d") || keys.has("arrowright"))
   if (left !== right) { p.facing = left ? -1 : 1; showTutorial(s, "move", "Use A e D para se mover.") }
@@ -312,7 +325,6 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     p.x = Math.max(16840, Math.min(18160, p.x))
   } else if (s.layer === "surface" && !s.wallBroken && p.x > 6108 && p.x < 6182) { p.x = 6108; p.vx = 0 }
   if (s.layer === "surface" && p.x > 22270 && p.x < 22370) { p.x = 22270; p.vx = 0 }
-  if (s.layer === "surface" && p.x > 420 && p.x < 510 && p.y + 42 > 426) { p.x = p.vx < 0 ? 510 : 420; p.vx = 0 }
   p.y += p.vy * dt
   p.grounded = false
   const shaftOpen = s.layer === "surface" && p.x > 1465 && p.x < 1565
@@ -517,8 +529,10 @@ export function interact(s: GameState) {
     if (s.forgePuzzleNodes.length < sequence.length && puzzleIndex === sequence[s.forgePuzzleNodes.length]) {
       s.forgePuzzleNodes.push(puzzleIndex)
       if (s.forgePuzzleNodes.length === sequence.length) {
-        unlockModules(s, ["lancador"]); s.player.moduleCharges = 3; s.player.energy = Math.max(s.player.energy, 1)
-        setToast(s, "As bigornas respondem em sequência. LANÇADOR DE SUCATA encontrado."); s.savePulse = 2
+        unlockModules(s, ["lancador"])
+        if (!s.equippedModules.includes("lancador") && s.equippedModules.length < s.moduleSlots) s.equippedModules.push("lancador")
+        s.player.moduleCharges = 3; s.player.energy = Math.max(s.player.energy, 1); s.player.moduleUse = 0; s.moduleMoment = 5.2; s.moduleDemoFired = false
+        setToast(s, "As bigornas respondem. A peça se encaixa no braço de Caco."); s.toastTimer = 5.2; s.savePulse = 2
       } else setToast(s, `Ressonador ${s.forgePuzzleNodes.length}/3 sincronizado. Siga as marcas no metal.`)
     } else { s.forgePuzzleNodes = []; setToast(s, "A sequência reinicia. Observe os três símbolos gravados nas bigornas.") }
     return
@@ -567,6 +581,86 @@ function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number,
 function blendColor(a: string, b: string, amount: number) { const t = Math.max(0, Math.min(1, amount)); const parse = (value: string) => [1, 3, 5].map((index) => Number.parseInt(value.slice(index, index + 2), 16)); const from = parse(a), to = parse(b); return `rgb(${from.map((value, index) => Math.round(value + (to[index] - value) * t)).join(",")})` }
 function polygon(ctx: CanvasRenderingContext2D, points: [number, number][], fill: string, stroke = "#201e1a") { ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]); for (const [x, y] of points.slice(1)) ctx.lineTo(x, y); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke() } }
 
+function drawFarSilhouettes(ctx: CanvasRenderingContext2D, areaIndex: number, cam: number, time: number) {
+  const forest = areaIndex === 7
+  for (let layer = 0; layer < 2; layer++) {
+    const speed = layer === 0 ? .09 : .17
+    const shift = ((cam * speed) % 170 + 170) % 170
+    for (let index = -1; index < 8; index++) {
+      const worldIndex = Math.floor(cam * speed / 170) + index
+      const x = index * 170 - shift
+      const seed = Math.abs(worldIndex * 73 + areaIndex * 41)
+      const height = 58 + seed % (layer === 0 ? 85 : 120)
+      const base = layer === 0 ? 422 : 410
+      const color = forest ? (layer === 0 ? "#182b25" : "#1c352b") : areaIndex >= 10 ? (layer === 0 ? "#171e23" : "#20262b") : (layer === 0 ? "#171d1d" : "#202423")
+      ctx.fillStyle = color
+      ctx.beginPath(); ctx.moveTo(x - 8, base); ctx.lineTo(x + 23, base - height * .68); ctx.lineTo(x + 55, base - height); ctx.lineTo(x + 93, base - height * .48); ctx.lineTo(x + 126, base - height * .83); ctx.lineTo(x + 178, base); ctx.closePath(); ctx.fill()
+      if (forest && layer === 0) {
+        ctx.strokeStyle = "#274535"; ctx.globalAlpha = .45; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + 55, base); ctx.lineTo(x + 58, base - height); ctx.stroke(); ctx.globalAlpha = 1
+      }
+    }
+  }
+  if (areaIndex === 8) {
+    for (let index = 0; index < 3; index++) {
+      const x = (index * 390 + 210 - cam * .12 + 1100) % 1100
+      const glow = ctx.createRadialGradient(x, 360, 3, x, 360, 110)
+      glow.addColorStop(0, `rgba(231,112,53,${.1 + Math.sin(time * 1.4 + index) * .025})`); glow.addColorStop(1, "rgba(231,112,53,0)")
+      ctx.fillStyle = glow; ctx.fillRect(x - 120, 245, 240, 210)
+    }
+  }
+}
+
+function drawAmbientField(ctx: CanvasRenderingContext2D, areaIndex: number, time: number, cam: number, velocity: number) {
+  const forest = areaIndex === 7
+  const oil = areaIndex === 10
+  const forge = areaIndex === 4 || areaIndex === 8
+  const city = areaIndex === 9
+  const drift = Math.min(1.8, 1 + Math.abs(velocity) / 320)
+  for (let index = 0; index < 24; index++) {
+    const seed = index * 137
+    const x = ((seed + time * (forest ? 7 : oil ? 2 : 11 + index % 5) * drift - cam * .13) % (VIEW_WIDTH + 20) + (VIEW_WIDTH + 20)) % (VIEW_WIDTH + 20) - 10
+    const y = ((index * 71 + time * (oil ? -15 : forest ? 12 : 8 + index % 4)) % 450 + 450) % 450
+    const alpha = .17 + (index % 4) * .055 + (Math.sin(time * .8 + index) + 1) * .035
+    if (forest) {
+      ctx.save(); ctx.translate(x + Math.sin(time + index) * (Math.abs(velocity) > 20 ? 12 : 3), y); ctx.rotate(Math.sin(time * .7 + index) * .7)
+      ctx.fillStyle = index % 5 === 0 ? `rgba(207,195,119,${alpha})` : `rgba(132,171,105,${alpha})`; ctx.beginPath(); ctx.ellipse(0, 0, index % 5 === 0 ? 2.6 : 3.5, 1.25, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore()
+    } else if (oil) {
+      ctx.strokeStyle = `rgba(143,190,171,${alpha})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 1 + index % 3, 0, Math.PI * 2); ctx.stroke()
+    } else {
+      const color = forge && index % 5 === 0 ? `rgba(246,157,81,${alpha + .2})` : city ? `rgba(166,203,186,${alpha})` : `rgba(194,190,166,${alpha})`
+      ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, forge && index % 5 === 0 ? 1.7 : 1 + index % 2 * .45, 0, Math.PI * 2); ctx.fill()
+    }
+  }
+}
+
+function drawForegroundDepth(ctx: CanvasRenderingContext2D, areaIndex: number, time: number, cam: number, player: GameState["player"]) {
+  const forest = areaIndex === 7
+  const sway = Math.sin(time * .65) * 12 + Math.max(-1, Math.min(1, player.vx / 220)) * 10
+  ctx.save(); ctx.globalAlpha = .72
+  if (forest) {
+    ctx.strokeStyle = "#192820"; ctx.lineWidth = 16; ctx.lineCap = "round"
+    ctx.beginPath(); ctx.moveTo(-24, 152); ctx.bezierCurveTo(28, 123, 43 + sway, 61, 118 + sway, -20); ctx.stroke()
+    ctx.beginPath(); ctx.moveTo(VIEW_WIDTH + 28, 136); ctx.bezierCurveTo(VIEW_WIDTH - 30, 111, VIEW_WIDTH - 72 - sway, 45, VIEW_WIDTH - 144 - sway, -22); ctx.stroke()
+    ctx.strokeStyle = "#35513a"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(13, 117); ctx.quadraticCurveTo(80 + sway, 72, 99 + sway, 30); ctx.moveTo(VIEW_WIDTH - 20, 112); ctx.quadraticCurveTo(VIEW_WIDTH - 94 - sway, 65, VIEW_WIDTH - 121 - sway, 22); ctx.stroke()
+    for (const [x, y] of [[28, 103], [53, 79], [VIEW_WIDTH - 42, 91], [VIEW_WIDTH - 84, 67]]) {
+      const reaction = Math.abs(x - (player.x - cam + 18)) < 150 ? Math.sign(x - (player.x - cam + 18)) * 7 : 0
+      ctx.fillStyle = "#466b45"; ctx.beginPath(); ctx.ellipse(x + sway * .35 + reaction, y, 15, 5, Math.sin(time + x) * .25, 0, Math.PI * 2); ctx.fill()
+    }
+  } else {
+    const offset = ((cam * 1.08) % 260 + 260) % 260
+    ctx.strokeStyle = areaIndex === 10 ? "#465c55" : "#49453a"; ctx.lineWidth = 7
+    ctx.beginPath(); ctx.moveTo(-30 - offset * .08, 27); ctx.bezierCurveTo(220, 42 + Math.sin(time * .35) * 3, 620, 4, VIEW_WIDTH + 40, 30); ctx.stroke()
+    ctx.strokeStyle = "#22231f"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-30, 28); ctx.bezierCurveTo(220, 43, 620, 5, VIEW_WIDTH + 40, 30); ctx.stroke()
+    for (let index = 0; index < 5; index++) {
+      const x = (index * 223 + 64 - offset + VIEW_WIDTH + 260) % (VIEW_WIDTH + 260) - 120
+      const length = 38 + (index * 29) % 58
+      ctx.strokeStyle = index % 2 ? "#4e493c" : "#393832"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, 28); ctx.quadraticCurveTo(x + sway * .15, 51, x + sway * .4, 28 + length); ctx.stroke()
+      if (index % 2 === 0) { ctx.fillStyle = "#79664a"; ctx.fillRect(x - 4, 28 + length - 2, 8, 8) }
+    }
+  }
+  ctx.restore(); ctx.lineCap = "butt"; ctx.globalAlpha = 1
+}
+
 function drawExpansionBiome(ctx: CanvasRenderingContext2D, areaIndex: number, cam: number, time: number) {
   if (areaIndex < 8) return
   const area = AREAS[areaIndex]
@@ -598,6 +692,29 @@ function drawExpansionBiome(ctx: CanvasRenderingContext2D, areaIndex: number, ca
       ctx.strokeStyle = palette.trim; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + width, 365 - (index % 3) * 36); ctx.lineTo(x + width + 42, 365 - (index % 3) * 36); ctx.lineTo(x + width + 42, 422); ctx.stroke()
       if (areaIndex === 8) { ctx.fillStyle = "rgba(235,103,46,.28)"; ctx.fillRect(x + 18, 420 - height, width - 36, 7) }
     }
+  }
+  if (areaIndex === 8) {
+    for (let i = 0; i < 5; i++) {
+      const x = ((i * 227 + 130 - cam * .36) % 1180 + 1180) % 1180 - 110
+      const drift = (time * (10 + i * 1.7) + i * 41) % 170
+      ctx.fillStyle = `rgba(184,177,155,${.025 + (i % 3) * .012})`
+      ctx.beginPath(); ctx.ellipse(x + Math.sin(time * .24 + i) * 11, 312 - drift, 9 + drift * .09, 15 + drift * .12, 0, 0, Math.PI * 2); ctx.fill()
+    }
+    const craneX = 480 + Math.sin(time * .18) * 95
+    ctx.strokeStyle = "#615143"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(craneX - 90, 145); ctx.lineTo(craneX + 90, 145); ctx.lineTo(craneX + 90, 172 + Math.sin(time * .8) * 3); ctx.stroke()
+    ctx.fillStyle = "#dc7641"; ctx.globalAlpha = .55 + Math.sin(time * 2.2) * .12; ctx.fillRect(craneX - 30, 405, 60, 8); ctx.globalAlpha = 1
+  }
+  if (areaIndex === 9) {
+    ctx.strokeStyle = "rgba(183,151,97,.55)"; ctx.lineWidth = 4
+    for (let i = 0; i < 3; i++) { const y = 250 + i * 44; ctx.beginPath(); ctx.moveTo(-40, y); ctx.bezierCurveTo(220, y - 24, 360, y + 26, 570, y); ctx.bezierCurveTo(730, y - 18, 850, y + 17, 1000, y - 4); ctx.stroke() }
+  }
+  if (areaIndex === 11) {
+    ctx.globalAlpha = .46; ctx.strokeStyle = "#575d6a"; ctx.lineWidth = 18
+    for (let i = 0; i < 3; i++) { const x = i * 420 - (cam * .19 % 420); ctx.beginPath(); ctx.moveTo(x - 100, 415); ctx.lineTo(x + 30, 190 + i * 35); ctx.lineTo(x + 150, 415); ctx.stroke() }
+    ctx.globalAlpha = 1
+  }
+  if (areaIndex === 12) {
+    const coreX = 610 - (cam * .08 % 520); const glow = ctx.createRadialGradient(coreX, 250, 4, coreX, 250, 190); glow.addColorStop(0, `rgba(211,139,106,${.13 + Math.sin(time * 1.3) * .035})`); glow.addColorStop(1, "rgba(211,139,106,0)"); ctx.fillStyle = glow; ctx.fillRect(coreX - 200, 55, 400, 390)
   }
   if (areaIndex === 10) {
     ctx.fillStyle = "rgba(14,48,47,.72)"; ctx.fillRect(area.start - cam, 427, area.end - area.start, 29)
@@ -640,6 +757,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   bg.addColorStop(.62, blendColor(area.tint, "#17412e", forestBlend))
   bg.addColorStop(1, blendColor("#161718", "#18392e", forestBlend))
   ctx.fillStyle = bg; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+  drawFarSilhouettes(ctx, AREAS.indexOf(area), cam, s.time)
   // Distantes torres e chaminés dão escala às cinco zonas.
   for (let i = 0; i < 32; i++) {
     const wx = i * 205, parallaxX = wx - cam * 0.27
@@ -789,7 +907,8 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   }
   ctx.restore()
   // Poeira, partículas e faíscas ambientais.
-  for (let i = 0; i < 36; i++) { const x = (i * 109 + s.time * (11 + i % 5) - cam * 0.2) % VIEW_WIDTH; const y = (i * 71 + s.time * (8 + i % 4)) % 430; ctx.fillStyle = i % 9 === 0 ? "rgba(215,137,73,.65)" : "rgba(190,184,158,.25)"; ctx.beginPath(); ctx.arc(x, y, i % 9 === 0 ? 1.7 : 1, 0, Math.PI * 2); ctx.fill() }
+  drawAmbientField(ctx, AREAS.indexOf(area), s.time, cam, s.player.vx)
+  drawForegroundDepth(ctx, AREAS.indexOf(area), s.time, cam, s.player)
   ctx.fillStyle = "rgba(0,0,0,.22)"; const vignette = ctx.createRadialGradient(480, 250, 145, 480, 250, 560); vignette.addColorStop(0, "rgba(0,0,0,0)"); vignette.addColorStop(1, "rgba(0,0,0,.56)"); ctx.fillStyle = vignette; ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
   ctx.textAlign = "left"
   ctx.restore()
@@ -816,7 +935,7 @@ export function drawCaco(ctx: CanvasRenderingContext2D, x: number, footY: number
     ctx.restore()
   }
   // Asymmetric scrap torso, shoulder plates, fasteners and amber chest slit.
-  const lean = player.dash > 0 ? -.58 : player.attack > 0 && player.attackDirection === "up" ? -.2 : player.attack > 0 && player.attackDirection === "down" ? .18 : player.vy < -80 ? -.12 : moving ? -.08 : 0
+  const lean = player.moduleUse > 0 ? -.16 : player.dash > 0 ? -.58 : player.attack > 0 && player.attackDirection === "up" ? -.2 : player.attack > 0 && player.attackDirection === "down" ? .18 : player.vy < -80 ? -.12 : moving ? -.08 : Math.sin(time * 2.4) * .018
   ctx.save(); ctx.translate(0,-30); ctx.rotate(lean)
   polygon(ctx, [[-12,-19],[7,-17],[14,-8],[11,9],[2,16],[-12,10],[-17,-4]], "#675746", "#1f1b17")
   polygon(ctx, [[-11,-16],[1,-17],[5,-5],[-9,-2],[-15,-8]], "#b27345", "#35251b")
@@ -826,7 +945,7 @@ export function drawCaco(ctx: CanvasRenderingContext2D, x: number, footY: number
   for (const [bx,by] of [[-12,-10],[8,-8],[-7,7],[8,9]] as [number,number][]) { ctx.fillStyle="#d0b98d"; ctx.beginPath(); ctx.arc(bx,by,1.15,0,Math.PI*2); ctx.fill(); ctx.fillStyle="#514536"; ctx.fillRect(bx-.3,by-.3,.6,.6) }
   // Left arm counterbalances the blade arm; each joint swings with the gait.
   ctx.save(); ctx.translate(-12,-12); ctx.rotate(-.16 - stride * .8); polygon(ctx, [[-3,-2],[4,-1],[7,8],[1,15],[-5,9]], "#615441"); polygon(ctx, [[-4,10],[4,11],[5,16],[-3,18]], "#a55c37"); ctx.restore()
-  const swingAngle = player.attack <= 0 ? .12 + stride * .9 : player.attackDirection === "up" ? -2.45 + attackProgress * .8 : player.attackDirection === "down" ? .78 + attackProgress * .62 : player.comboStep === 3 ? -1.8 + attackProgress * 3.1 : player.comboStep === 2 ? .95 - attackProgress * 2.6 : -.95 + attackProgress * 2.35
+  const swingAngle = player.moduleUse > 0 ? -.72 + (1 - player.moduleUse / .28) * .28 : player.attack <= 0 ? .12 + stride * .9 : player.attackDirection === "up" ? -2.45 + attackProgress * .8 : player.attackDirection === "down" ? .78 + attackProgress * .62 : player.comboStep === 3 ? -1.8 + attackProgress * 3.1 : player.comboStep === 2 ? .95 - attackProgress * 2.6 : -.95 + attackProgress * 2.35
   ctx.save(); ctx.translate(9,-12); ctx.rotate(swingAngle); polygon(ctx, [[-3,-3],[5,-2],[7,8],[2,14],[-4,9]], "#ad6540"); ctx.fillStyle="#8f6c4b"; ctx.beginPath(); ctx.arc(2,10,2.6,0,Math.PI*2); ctx.fill()
   // The improvised blade is attached to this rotating forearm.
   polygon(ctx, [[0,11],[4,10],[7,24],[17,39],[11,42],[2,28]], player.attack > 0 ? "#d5c8a3" : "#9c9883", "#342b21"); polygon(ctx, [[7,24],[17,39],[12,37]], "#e9d6a8", "")
