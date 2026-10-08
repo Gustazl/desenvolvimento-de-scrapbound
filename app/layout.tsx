@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SCRAPBOUND: A Revolução das Sucatas',
-  description: 'Explore o Abismo de Ferro, lute contra máquinas esquecidas e descubra a natureza que sobrevive sob a sucata neste metroidvania 2D.',
+  title: 'SCRAPBOUND — A Revolução das Sucatas',
+  description: 'Desperte como Caco no Abismo de Ferro, explore ruínas retomadas pela natureza e descubra o mistério do Projeto Scrapbound neste metroidvania 2D.',
   generator: 'v0.app',
   icons: {
     icon: [

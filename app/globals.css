@@ -297,3 +297,64 @@
 @media (max-width: 420px) { .core-module-grid { grid-template-columns: 1fr; max-height: 46vh; overflow-y: auto; }.core-module-card { min-height: 84px; } }
   @media (max-height: 620px) and (min-width: 761px) { .scrap-shell { padding-top: 10px; padding-bottom: 8px; }.game-topbar { height: 45px; }.game-footer { height: 34px; }.page-caption { margin-top: 8px; } }
 
+.cinematic-hidden { display: none !important; }
+.game-frame:has(.cinematic-overlay) .game-footer, .scrap-shell:has(.cinematic-overlay) .page-caption { display: none; }
+.cinematic-overlay { position: absolute; z-index: 12; inset: 0; overflow: hidden; background: #050707; }
+.cinematic-overlay canvas { display: block; width: 100%; height: 100%; }
+.cinematic-skip { position: absolute; right: 18px; bottom: 16px; display: flex; align-items: center; gap: 9px; padding: 7px 10px; border: 1px solid #81755c66; background: #101311aa; color: #c4b89f; font: 8px monospace; letter-spacing: .12em; cursor: pointer; }
+.cinematic-skip:hover { border-color: #c39462; color: #f0d9b2; }
+.cinematic-skip kbd { padding: 3px 5px; border: 1px solid #5c5446; color: #d7c7a8; font: 8px monospace; }
+.cinematic-caption { position: absolute; left: 18px; bottom: 20px; color: #b2a58d; font: 8px monospace; letter-spacing: .22em; }
+.title-content { transform: translateY(-14px); }
+.title-quote { margin: 12px 0; }
+.title-buttons { gap: 5px; }
+.title-buttons .button-primary, .title-buttons .button-secondary { min-height: 32px; }
+.title-buttons .button-secondary:disabled { opacity: .43; cursor: not-allowed; }
+.gallery-action { margin-top: 2px; }
+.hud-subarea { max-width: 205px; color: #9dad8c; font: 7px monospace; letter-spacing: .12em; }
+.story-objective { position: absolute; z-index: 2; top: 112px; right: 24px; display: grid; gap: 5px; padding: 8px 11px; border-left: 1px solid #95a775; background: #171b17c9; color: #d9d5bf; font: 10px Georgia, serif; }
+.story-objective small { color: #9db184; font: 7px monospace; letter-spacing: .15em; }
+.tutorial-hint { position: absolute; z-index: 4; left: 50%; bottom: 48px; display: flex; align-items: center; gap: 8px; transform: translateX(-50%); padding: 8px 12px; border: 1px solid #9b8b6a66; background: #141713d9; color: #e4d9c2; font: 10px monospace; letter-spacing: .02em; box-shadow: 0 5px 18px #0005; animation: toast-in .2s ease-out; white-space: nowrap; }
+.tutorial-dot { width: 5px; height: 5px; border-radius: 50%; background: #a9c38d; box-shadow: 0 0 8px #b1d192; }
+.vista-overlay { position: absolute; z-index: 6; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; background: linear-gradient(180deg, #10171222, #10171288); color: #e8e2cd; text-align: center; animation: ending-reveal .9s ease both; pointer-events: none; }
+.vista-overlay > span, .vista-overlay > small { color: #cad2a7; font: 8px monospace; letter-spacing: .24em; }
+.vista-overlay strong { font: 400 clamp(23px, 4vw, 38px) Georgia, serif; text-shadow: 0 3px 24px #000; }
+.terminal-record { display: grid; gap: 6px; width: min(340px, 100%); margin: 16px auto 21px; padding: 12px 14px; border: 1px solid #414b3c; background: #111713a8; text-align: left; }
+.terminal-record span { display: flex; justify-content: space-between; gap: 12px; color: #969f8b; font: 8px monospace; letter-spacing: .06em; }
+.terminal-record b { color: #bdd49f; font-weight: 500; }
+.ending-card h3 { margin: 20px 0 6px; color: #e2dcc8; font: 400 18px Georgia, serif; letter-spacing: .08em; }
+.ending-silhouette { position: relative; width: 180px; height: 94px; margin: 15px auto 3px; overflow: hidden; border: 1px solid #485344; background: linear-gradient(180deg, #1e2923, #121714); }
+.ending-silhouette::before { position: absolute; content: ""; left: 0; right: 0; bottom: 13px; height: 36px; background: #26382a; clip-path: polygon(0 90%, 20% 20%, 36% 75%, 55% 5%, 73% 70%, 88% 18%, 100% 85%); }
+.ending-silhouette span { position: absolute; left: 29px; bottom: 15px; width: 12px; height: 43px; background: #101311; clip-path: polygon(40% 0, 70% 6%, 85% 29%, 68% 42%, 84% 100%, 16% 100%, 30% 44%, 10% 31%); }
+.ending-silhouette i { position: absolute; left: 35px; bottom: 46px; width: 3px; height: 3px; border-radius: 50%; background: #e3c17c; box-shadow: 0 0 8px #e3c17c; }
+@media (max-width: 760px) {
+  .game-frame:has(.cinematic-overlay) { margin-top: 0; }
+  .cinematic-caption { left: 10px; bottom: 14px; font-size: 6px; }
+  .cinematic-skip { right: 10px; bottom: 9px; font-size: 6px; }
+  .story-objective { top: 81px; right: 9px; max-width: 46%; font-size: 8px; }
+  .story-objective small { font-size: 6px; }
+  .tutorial-hint { bottom: 42px; max-width: 90%; padding: 7px 9px; font-size: 8px; white-space: normal; }
+  .hud-subarea { max-width: 112px; font-size: 5px; }
+  .vista-overlay { gap: 8px; }
+  .vista-overlay > span, .vista-overlay > small { font-size: 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .cinematic-overlay *, .tutorial-hint, .vista-overlay { animation-duration: .01ms !important; } }
+.title-content { transform: none; }
+.title-eyebrow { margin-bottom: 8px; }
+.title-content h1 { font-size: clamp(41px, 6vw, 72px); }
+.title-subtitle { margin: 8px 0 10px; }
+.title-quote { margin: 9px 0; font-size: 14px; line-height: 1.4; }
+.title-buttons { gap: 4px; }
+.title-buttons .button-primary, .title-buttons .button-secondary { min-height: 29px; }
+.gallery-action { min-height: 20px; margin-top: 0; padding: 2px 0; }
+.ending-card { max-height: calc(100% - 24px); overflow-y: auto; padding: 16px 24px; }
+.ending-card .terminal-orbit { width: 62px; height: 62px; margin: 11px auto 8px; }
+.ending-card h2 { margin: 7px 0 8px; font-size: 23px; }
+.ending-card h2 strong { font-size: 25px; }
+.ending-card .ending-ecology { margin: 8px 0; }
+.terminal-record { gap: 4px; margin: 10px auto 14px; padding: 9px 12px; }
+.ending-card .button-primary { min-height: 34px; margin-inline: auto; }
+.ending-silhouette { height: 76px; margin: 10px auto 2px; }
+.ending-card h3 { margin: 12px 0 4px; font-size: 16px; }
+.ending-copy { margin: 10px auto 14px; }
+
