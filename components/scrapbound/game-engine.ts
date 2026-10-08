@@ -2,28 +2,35 @@ export type EnemyKind = "crawler" | "fly" | "soldier" | "spider"
 export type AttackDirection = "left" | "right" | "up" | "down"
 export type HitParticle = { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string; size: number }
 export type Enemy = { id: number; kind: EnemyKind; x: number; y: number; vx: number; hp: number; maxHp: number; phase: number; hitBy: number; hurtTimer?: number; hitFlash?: number; knockY?: number; alive: boolean }
+export type Projectile = { x: number; y: number; vx: number; life: number }
 export type Dialogue = { name: string; lines: string[]; index: number; shop?: boolean }
 export type GameState = {
-  player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; attackDirection: AttackDirection; attackPhase: "idle" | "start" | "active" | "recovery"; comboStep: number; comboWindow: number; attackBuffer: number; jumpBuffer: number; coyoteTime: number; dash: number; dashCooldown: number; invulnerable: number; hurtFlash: number; pulseCooldown: number; pulseEffect: number; pogoCooldown: number }
-  enemies: Enemy[]; unlockedModules: string[]; equippedModules: string[]; moduleSlots: number; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean }
-  deathTimer: number; camera: number; cameraZoom: number; time: number; hitStop: number; cameraShake: number; particles: HitParticle[]; checkpoint: number; foundGreen: boolean; forestEntered: boolean; forestMoment: number; vistaMoment: number; vistaSeen: boolean; flowerBloomed: boolean; projectRevealed: boolean; projectCutsceneSeen: boolean; storyStage: number; introSeen: boolean; recoveryAwakened: boolean; tutorialSeen: string[]; tutorialHint: string; tutorialHintTimer: number; secretFound: boolean; wallBroken: boolean; shortcut: boolean; bossWon: boolean; ferronMet: boolean; upgrades: string[]; dialogue: Dialogue | null; toast: string; toastTimer: number; savePulse: number
-  layer: "surface" | "underworks"; cameraY: number; lowerWallHits: number; lowerWallHitBy: number; lowerWallBroken: boolean; relayActivated: boolean; tunnelMemoryFound: boolean; discoveredRooms: string[]
+  player: { x: number; y: number; vx: number; vy: number; hp: number; maxHp: number; energy: number; screws: number; facing: number; grounded: boolean; sitting: boolean; attack: number; attackId: number; attackDirection: AttackDirection; attackPhase: "idle" | "start" | "active" | "recovery"; comboStep: number; comboWindow: number; attackBuffer: number; jumpBuffer: number; coyoteTime: number; dash: number; dashCooldown: number; invulnerable: number; hurtFlash: number; pulseCooldown: number; pulseEffect: number; pogoCooldown: number; moduleCharges: number; moduleRecharge: number }
+  enemies: Enemy[]; projectiles: Projectile[]; unlockedModules: string[]; equippedModules: string[]; moduleSlots: number; boss: { hp: number; maxHp: number; x: number; phase: number; timer: number; attack: "slam" | "charge" | "shards"; alive: boolean; hitBy: number; secondPhase: boolean; stage: number; weakWindow: number }
+  deathTimer: number; camera: number; cameraZoom: number; time: number; hitStop: number; cameraShake: number; particles: HitParticle[]; checkpoint: number; foundGreen: boolean; forestEntered: boolean; forestMoment: number; vistaMoment: number; vistaSeen: boolean; flowerBloomed: boolean; projectRevealed: boolean; projectCutsceneSeen: boolean; storyStage: number; introSeen: boolean; recoveryAwakened: boolean; tutorialSeen: string[]; tutorialHint: string; tutorialHintTimer: number; secretFound: boolean; wallBroken: boolean; shortcut: boolean; richShortcut: boolean; bossWon: boolean; ferronMet: boolean; upgrades: string[]; dialogue: Dialogue | null; toast: string; toastTimer: number; savePulse: number
+  forgePuzzleNodes: number[]; foundCoreFragments: number[]; coreFragments: number
+  layer: "surface" | "underworks" | "oil"; cameraY: number; lowerWallHits: number; lowerWallHitBy: number; lowerWallBroken: boolean; relayActivated: boolean; tunnelMemoryFound: boolean; discoveredRooms: string[]
 }
 
-export const WORLD_WIDTH = 10800
+export const WORLD_WIDTH = 22600
 export const VIEW_WIDTH = 960
 export const VIEW_HEIGHT = 540
 export const GROUND_Y = 458
 export const DEBUG_COMBAT = false
 export const AREAS = [
-  { name: "Montanha do Descarte", start: 0, end: 1100, tint: "#382e2a" },
-  { name: "Túneis de Ferrugem", start: 1100, end: 2200, tint: "#292d2b" },
-  { name: "Vila dos Pregos", start: 2200, end: 3200, tint: "#38312a" },
-  { name: "Cemitério de Motores", start: 3200, end: 4500, tint: "#2a3030" },
-  { name: "Entrada da Fornalha", start: 4500, end: 5900, tint: "#3b2824" },
-  { name: "Jardim Morto", start: 5900, end: 6900, tint: "#26332e" },
-  { name: "Área de Recuperação", start: 6900, end: 8700, tint: "#253a35" },
-  { name: "Primeira Floresta", start: 8700, end: WORLD_WIDTH, tint: "#18382e" },
+  { name: "Montanha do Descarte", start: 0, end: 1100, tint: "#382e2a", feature: "Entrada do Abismo" },
+  { name: "Túneis de Ferrugem", start: 1100, end: 2200, tint: "#292d2b", feature: "Galerias e vapor" },
+  { name: "Vila dos Pregos", start: 2200, end: 3200, tint: "#38312a", feature: "Vila e abrigo" },
+  { name: "Cemitério de Motores", start: 3200, end: 4500, tint: "#2a3030", feature: "Trilhos e motores" },
+  { name: "Entrada da Fornalha", start: 4500, end: 5900, tint: "#3b2824", feature: "Colosso da Fornalha" },
+  { name: "Jardim Morto", start: 5900, end: 6900, tint: "#26332e", feature: "Memória sob as placas" },
+  { name: "Área de Recuperação", start: 6900, end: 8700, tint: "#253a35", feature: "Instalação humana" },
+  { name: "Primeira Floresta", start: 8700, end: 11000, tint: "#18382e", feature: "Clareiras e ruínas" },
+  { name: "A Forja", start: 11000, end: 13600, tint: "#442b22", feature: "Linha de reciclagem e fornos" },
+  { name: "Sucatas Ricas", start: 13600, end: 16000, tint: "#393326", feature: "Mercado e distrito das oficinas" },
+  { name: "Profundezas do Óleo", start: 16000, end: 18400, tint: "#172d2d", feature: "Cidade submersa" },
+  { name: "Abismo Profundo", start: 18400, end: 20800, tint: "#191d29", feature: "Instalações humanas soterradas" },
+  { name: "Núcleo Antigo", start: 20800, end: WORLD_WIDTH, tint: "#30272c", feature: "Portão do núcleo" },
 ]
 
 export const PLATFORMS = [
@@ -38,11 +45,16 @@ export const PLATFORMS = [
   { x: 8530, y: 318, w: 210 }, { x: 8830, y: 362, w: 190 },
   { x: 9160, y: 344, w: 210 }, { x: 9500, y: 310, w: 190 }, { x: 9820, y: 365, w: 230 },
   { x: 10180, y: 326, w: 220 }, { x: 10520, y: 356, w: 190 },
+  { x: 11150, y: 366, w: 220 }, { x: 11420, y: 312, w: 180 }, { x: 11730, y: 350, w: 210 }, { x: 12050, y: 286, w: 180 }, { x: 12360, y: 336, w: 220 }, { x: 12720, y: 294, w: 190 }, { x: 13040, y: 355, w: 230 }, { x: 13320, y: 315, w: 180 },
+  { x: 13770, y: 358, w: 220 }, { x: 14080, y: 306, w: 180 }, { x: 14400, y: 346, w: 220 }, { x: 14720, y: 284, w: 180 }, { x: 15030, y: 333, w: 220 }, { x: 15360, y: 295, w: 190 }, { x: 15700, y: 355, w: 210 },
+  { x: 16120, y: 355, w: 220 }, { x: 16420, y: 300, w: 190 }, { x: 16760, y: 346, w: 220 }, { x: 17080, y: 278, w: 180 }, { x: 17410, y: 334, w: 230 }, { x: 17750, y: 296, w: 180 }, { x: 18080, y: 357, w: 220 },
+  { x: 18520, y: 354, w: 220 }, { x: 18820, y: 292, w: 180 }, { x: 19160, y: 338, w: 220 }, { x: 19480, y: 270, w: 190 }, { x: 19820, y: 324, w: 220 }, { x: 20150, y: 286, w: 180 }, { x: 20480, y: 350, w: 220 },
+  { x: 20920, y: 348, w: 220 }, { x: 21240, y: 286, w: 180 }, { x: 21560, y: 330, w: 220 }, { x: 21880, y: 276, w: 200 }, { x: 22180, y: 340, w: 170 },
 ]
 
 export function createGameState(saved?: Partial<GameState>): GameState {
   const base: GameState = {
-    player: { x: 120, y: GROUND_Y - 42, vx: 0, vy: 0, hp: 5, maxHp: 5, energy: 3, screws: 12, facing: 1, grounded: false, sitting: false, attack: 0, attackId: 0, attackDirection: "right", attackPhase: "idle", comboStep: 0, comboWindow: 0, attackBuffer: 0, jumpBuffer: 0, coyoteTime: 0, dash: 0, dashCooldown: 0, invulnerable: 0, hurtFlash: 0, pulseCooldown: 0, pulseEffect: 0, pogoCooldown: 0 },
+    player: { x: 120, y: GROUND_Y - 42, vx: 0, vy: 0, hp: 5, maxHp: 5, energy: 3, screws: 12, facing: 1, grounded: false, sitting: false, attack: 0, attackId: 0, attackDirection: "right", attackPhase: "idle", comboStep: 0, comboWindow: 0, attackBuffer: 0, jumpBuffer: 0, coyoteTime: 0, dash: 0, dashCooldown: 0, invulnerable: 0, hurtFlash: 0, pulseCooldown: 0, pulseEffect: 0, pogoCooldown: 0, moduleCharges: 3, moduleRecharge: 0 },
     unlockedModules: [], equippedModules: [], moduleSlots: 2,
     enemies: [
       { id: 1, kind: "crawler", x: 650, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
@@ -58,21 +70,43 @@ export function createGameState(saved?: Partial<GameState>): GameState {
       { id: 11, kind: "crawler", x: 9250, y: GROUND_Y - 24, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
       { id: 12, kind: "fly", x: 9890, y: 275, vx: 0, hp: 2, maxHp: 2, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
       { id: 13, kind: "spider", x: 10480, y: 342, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 14, kind: "soldier", x: 11380, y: GROUND_Y - 40, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 15, kind: "fly", x: 12000, y: 255, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 16, kind: "spider", x: 12850, y: 335, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 17, kind: "soldier", x: 13980, y: GROUND_Y - 40, vx: 0, hp: 5, maxHp: 5, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 18, kind: "fly", x: 14940, y: 270, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 19, kind: "spider", x: 15880, y: 335, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 20, kind: "soldier", x: 16820, y: GROUND_Y - 40, vx: 0, hp: 5, maxHp: 5, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 21, kind: "fly", x: 17860, y: 245, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 22, kind: "spider", x: 18900, y: 330, vx: 0, hp: 5, maxHp: 5, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 23, kind: "soldier", x: 19850, y: GROUND_Y - 40, vx: 0, hp: 6, maxHp: 6, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 24, kind: "fly", x: 21150, y: 260, vx: 0, hp: 5, maxHp: 5, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 25, kind: "crawler", x: 17380, y: GROUND_Y - 24, vx: 0, hp: 3, maxHp: 3, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 26, kind: "fly", x: 17520, y: 252, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
+      { id: 27, kind: "spider", x: 17700, y: 330, vx: 0, hp: 4, maxHp: 4, phase: 0, hitBy: -1, hurtTimer: 0, hitFlash: 0, alive: true },
     ],
-    boss: { hp: 18, maxHp: 18, x: 5480, phase: 0, timer: 1.4, attack: "slam", alive: true, hitBy: -1, secondPhase: false },
-    deathTimer: 0, camera: 0, cameraZoom: 1, time: 0, hitStop: 0, cameraShake: 0, particles: [], checkpoint: 0, foundGreen: false, forestEntered: false, forestMoment: 0, vistaMoment: 0, vistaSeen: false, flowerBloomed: false, projectRevealed: false, projectCutsceneSeen: false, storyStage: 0, introSeen: false, recoveryAwakened: false, tutorialSeen: [], tutorialHint: "", tutorialHintTimer: 0, secretFound: false, wallBroken: false, shortcut: false, bossWon: false, ferronMet: false, upgrades: [], dialogue: null, toast: "", toastTimer: 0, savePulse: 0,
+    projectiles: [],
+    boss: { hp: 18, maxHp: 18, x: 5480, phase: 0, timer: 1.4, attack: "slam", alive: true, hitBy: -1, secondPhase: false, stage: 1, weakWindow: 0 },
+    deathTimer: 0, camera: 0, cameraZoom: 1, time: 0, hitStop: 0, cameraShake: 0, particles: [], checkpoint: 0, foundGreen: false, forestEntered: false, forestMoment: 0, vistaMoment: 0, vistaSeen: false, flowerBloomed: false, projectRevealed: false, projectCutsceneSeen: false, storyStage: 0, introSeen: false, recoveryAwakened: false, tutorialSeen: [], tutorialHint: "", tutorialHintTimer: 0, secretFound: false, wallBroken: false, shortcut: false, richShortcut: false, forgePuzzleNodes: [], foundCoreFragments: [], coreFragments: 0, bossWon: false, ferronMet: false, upgrades: [], dialogue: null, toast: "", toastTimer: 0, savePulse: 0,
     layer: "surface", cameraY: 0, lowerWallHits: 0, lowerWallHitBy: -1, lowerWallBroken: false, relayActivated: false, tunnelMemoryFound: false, discoveredRooms: ["area:0"],
   }
   if (!saved) return base
-  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, particles: Array.isArray(saved.particles) ? saved.particles : [], discoveredRooms: Array.isArray(saved.discoveredRooms) ? saved.discoveredRooms : ["area:0"], tutorialSeen: Array.isArray(saved.tutorialSeen) ? saved.tutorialSeen : [], tutorialHintTimer: 0, vistaMoment: 0, layer: saved.layer === "underworks" ? "underworks" : "surface", lowerWallHits: saved.lowerWallHits ?? 0, lowerWallHitBy: saved.lowerWallHitBy ?? -1, lowerWallBroken: saved.lowerWallBroken ?? false, relayActivated: saved.relayActivated ?? false, recoveryAwakened: saved.recoveryAwakened ?? false, storyStage: saved.storyStage ?? 0, introSeen: saved.introSeen ?? false, vistaSeen: saved.vistaSeen ?? false, projectCutsceneSeen: saved.projectCutsceneSeen ?? false, tunnelMemoryFound: saved.tunnelMemoryFound ?? false, unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, boss: { ...base.boss, ...saved.boss } }
+  return { ...base, ...saved, player: { ...base.player, ...saved.player, x: saved.player?.x ?? 120, y: saved.player?.y ?? GROUND_Y - 42 }, enemies: saved.enemies ?? base.enemies, projectiles: Array.isArray(saved.projectiles) ? saved.projectiles : [], particles: Array.isArray(saved.particles) ? saved.particles : [], discoveredRooms: Array.isArray(saved.discoveredRooms) ? saved.discoveredRooms : ["area:0"], tutorialSeen: Array.isArray(saved.tutorialSeen) ? saved.tutorialSeen : [], tutorialHintTimer: 0, vistaMoment: 0, layer: saved.layer === "underworks" || saved.layer === "oil" ? saved.layer : "surface", lowerWallHits: saved.lowerWallHits ?? 0, lowerWallHitBy: saved.lowerWallHitBy ?? -1, lowerWallBroken: saved.lowerWallBroken ?? false, relayActivated: saved.relayActivated ?? false, recoveryAwakened: saved.recoveryAwakened ?? false, storyStage: saved.storyStage ?? 0, introSeen: saved.introSeen ?? false, vistaSeen: saved.vistaSeen ?? false, projectCutsceneSeen: saved.projectCutsceneSeen ?? false, tunnelMemoryFound: saved.tunnelMemoryFound ?? false, unlockedModules: saved.unlockedModules ?? base.unlockedModules, equippedModules: saved.equippedModules ?? base.equippedModules, moduleSlots: saved.moduleSlots ?? base.moduleSlots, richShortcut: saved.richShortcut ?? false, forgePuzzleNodes: Array.isArray(saved.forgePuzzleNodes) ? saved.forgePuzzleNodes : [], foundCoreFragments: Array.isArray(saved.foundCoreFragments) ? saved.foundCoreFragments : [], coreFragments: saved.coreFragments ?? saved.foundCoreFragments?.length ?? 0, boss: { ...base.boss, ...saved.boss, stage: saved.boss?.stage ?? 1, weakWindow: saved.boss?.weakWindow ?? 0 } }
 }
 
 export function getArea(x: number) { return AREAS.find((area) => x >= area.start && x < area.end) ?? AREAS[AREAS.length - 1] }
 
 export function getSubarea(x: number) {
-  if (x < 6900 || x >= 8700) return ""
-  const subareas = ["PORTÃO DE RECUPERAÇÃO", "CORREDOR ECOLÓGICO", "ESTAÇÃO DE PESQUISA", "RESERVATÓRIO", "LABORATÓRIO ABANDONADO", "ESTUFA", "TÚNEIS DE RAÍZES", "FLORESTA EXTERIOR", "TORRE DE OBSERVAÇÃO"]
-  return subareas[Math.min(subareas.length - 1, Math.floor((x - 6900) / 200))]
+  if (x >= 6900 && x < 8700) {
+    const subareas = ["PORTÃO DE RECUPERAÇÃO", "CORREDOR ECOLÓGICO", "ESTAÇÃO DE PESQUISA", "RESERVATÓRIO", "LABORATÓRIO ABANDONADO", "ESTUFA", "TÚNEIS DE RAÍZES", "FLORESTA EXTERIOR", "TORRE DE OBSERVAÇÃO"]
+    return subareas[Math.min(subareas.length - 1, Math.floor((x - 6900) / 200))]
+  }
+  if (x >= 11000 && x < 13600) return ["PORTÃO DA FORJA", "PÁTIO DAS BIGORNAS", "LINHA DE RECICLAGEM", "FORNOS", "CÂMARA DE FUNDIÇÃO", "GALERIA DAS CORRENTES", "OFICINAS ANTIGAS", "RESERVATÓRIO DE METAL", "FORNALHA CENTRAL", "FUNDO DA FORJA", "CÂMARA DO MESTRE"][Math.min(10, Math.floor((x - 11000) / 236))]
+  if (x >= 13600 && x < 16000) return ["PORTÃO DOURADO", "MERCADO DE PEÇAS", "DISTRITO DAS OFICINAS", "PRAÇA CENTRAL", "TORRE DOS FUNDIDORES", "BAIRRO ANTIGO", "ESGOTOS DOURADOS", "SUBSOLO", "PALÁCIO DE SUCATA"][Math.min(8, Math.floor((x - 13600) / 267))]
+  if (x >= 16000 && x < 18400) return ["MAR NEGRO", "TÚNEIS SUBMERSOS", "CÂMARAS DE PRESSÃO", "MÁQUINAS AFUNDADAS", "CIDADE SUBMERSA", "POÇO DO ÓLEO", "NÚCLEO SUBTERRÂNEO"][Math.min(6, Math.floor((x - 16000) / 343))]
+  if (x >= 18400 && x < 20800) return ["QUEDA CEGA", "ARCOS IMPOSSÍVEIS", "INSTALAÇÃO HUMANA", "SALA DE CONTENÇÃO", "CATEDRAL DE MÁQUINAS", "CÂMARA SEM ECO"][Math.min(5, Math.floor((x - 18400) / 400))]
+  if (x >= 20800) return ["VESTÍBULO ANTIGO", "ANEL DE CONTENÇÃO", "MOTOR ADORMECIDO", "PORTÃO DO NÚCLEO"][Math.min(3, Math.floor((x - 20800) / 450))]
+  return ""
 }
 
 function setToast(state: GameState, text: string) { state.toast = text; state.toastTimer = 2.8 }
@@ -94,7 +128,7 @@ export function toggleModule(state: GameState, id: string) {
   setToast(state, "Módulo sintonizado ao Núcleo.")
 }
 
-function coreCapacity(s: GameState) { return s.upgrades.includes("core") ? 4 : 3 }
+export function getCoreCapacity(s: GameState) { return Math.min(6, 3 + (s.upgrades.includes("core") ? 1 : 0) + Math.floor(s.coreFragments / 3)) }
 
 function attackDirection(keys: Set<string>, facing: number): AttackDirection {
   if (keys.has("w") || keys.has("arrowup")) return "up"
@@ -155,7 +189,7 @@ function usePulse(s: GameState) {
     enemy.hurtTimer = .2
     enemy.hitFlash = .16
     addSparks(s, enemy.x, enemy.y, false)
-    if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(coreCapacity(s), p.energy + .2) }
+    if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(getCoreCapacity(s), p.energy + .2) }
   }
   if (s.boss.alive && Math.abs(s.boss.x - (p.x + 18)) < 195 && Math.abs((GROUND_Y - 100) - (p.y + 22)) < 160) {
     s.boss.hp -= 1
@@ -182,6 +216,19 @@ function usePulse(s: GameState) {
   }
 }
 
+function fireModule(s: GameState) {
+  const p = s.player
+  if (!s.equippedModules.includes("lancador") || p.moduleCharges <= 0 || p.energy < .5) {
+    setToast(s, p.moduleCharges <= 0 ? "Lançador recarregando." : "O módulo precisa estar equipado e o Núcleo carregado.")
+    return
+  }
+  p.moduleCharges -= 1
+  p.moduleRecharge = p.moduleCharges < 3 ? 2.8 : 0
+  p.energy = Math.max(0, p.energy - .5)
+  s.projectiles.push({ x: p.x + (p.facing > 0 ? 34 : 2), y: p.y + 20, vx: p.facing * 470, life: 2.2 })
+  addSparks(s, p.x + (p.facing > 0 ? 32 : 4), p.y + 20)
+}
+
 export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   if (!Array.isArray(s.particles)) s.particles = []
   if (!Array.isArray(s.discoveredRooms)) s.discoveredRooms = ["area:0"]
@@ -203,13 +250,18 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   })
   const wasDying = s.deathTimer > 0
   s.deathTimer = Math.max(0, s.deathTimer - dt)
-  if (wasDying && s.deathTimer === 0) { const fellFromUnderworks = s.layer === "underworks"; p.hp = p.maxHp; p.x = fellFromUnderworks ? 1515 : s.checkpoint || 120; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.4; p.hurtFlash = 0; if (fellFromUnderworks) { s.layer = "surface"; s.cameraY = 0 }; setToast(s, fellFromUnderworks ? "Caco foi remontado na escada de serviço dos Túneis." : "Caco foi remontado no último Marco."); s.savePulse = 2 }
+  if (wasDying && s.deathTimer === 0) { const returnFromDepth = s.layer !== "surface"; const fellFromUnderworks = s.layer === "underworks"; p.hp = p.maxHp; p.x = fellFromUnderworks ? 1515 : s.checkpoint || 120; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.4; p.hurtFlash = 0; if (returnFromDepth) { s.layer = "surface"; s.cameraY = 0 }; setToast(s, fellFromUnderworks ? "Caco foi remontado na escada de serviço dos Túneis." : returnFromDepth ? "Caco foi remontado no último Marco, longe do óleo." : "Caco foi remontado no último Marco."); s.savePulse = 2 }
   if (s.hitStop > 0) return
   s.cameraZoom += ((s.forestMoment > 0 || s.vistaMoment > 0 ? .78 : 1) - s.cameraZoom) * Math.min(1, dt * 1.1)
   p.invulnerable = Math.max(0, p.invulnerable - dt)
   p.hurtFlash = Math.max(0, p.hurtFlash - dt)
   p.pulseCooldown = Math.max(0, p.pulseCooldown - dt)
   p.pulseEffect = Math.max(0, p.pulseEffect - dt)
+  p.energy = Math.min(getCoreCapacity(s), p.energy + dt * .1)
+  if (s.unlockedModules.includes("lancador") && p.moduleCharges < 3) {
+    p.moduleRecharge -= dt
+    if (p.moduleRecharge <= 0) { p.moduleCharges = Math.min(3, p.moduleCharges + 1); p.moduleRecharge = p.moduleCharges < 3 ? 2.8 : 0 }
+  }
   p.dashCooldown = Math.max(0, p.dashCooldown - dt)
   p.attack = Math.max(0, p.attack - dt)
   p.attackPhase = p.attack <= 0 ? "idle" : p.attack > .22 ? "start" : p.attack >= .1 ? "active" : "recovery"
@@ -231,6 +283,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     p.attackBuffer = .36
   }
   if (!scripted && keys.has("_pulsePressed")) { keys.delete("_pulsePressed"); showTutorial(s, "pulse-use", "K — Pulso"); usePulse(s) }
+  if (!scripted && keys.has("_powerPressed")) { keys.delete("_powerPressed"); fireModule(s) }
   const dashPressed = keys.has("_dashPressed")
   if (dashPressed) keys.delete("_dashPressed")
   if (!scripted && dashPressed && p.dashCooldown <= 0 && p.dash <= 0) {
@@ -246,22 +299,26 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   if (p.attackBuffer > 0 && p.attack <= 0 && p.dash <= 0 && !scripted) { beginAttack(p, keys); p.attackBuffer = 0 }
 
   if (p.dash <= 0) {
-    if (left !== right) { p.sitting = false; p.vx = (left ? -1 : 1) * (keys.has("_run") ? 285 : 220) }
+    if (left !== right) { p.sitting = false; p.vx = (left ? -1 : 1) * (s.layer === "oil" ? (keys.has("_run") ? 180 : 145) : (keys.has("_run") ? 285 : 220)) }
     else p.vx *= Math.pow(0.0009, dt)
-    p.vy = Math.min(p.vy + 1450 * dt, 900)
+    p.vy = Math.min(p.vy + (s.layer === "oil" ? 780 : 1450) * dt, s.layer === "oil" ? 430 : 900)
   }
   const oldY = p.y
   p.x = Math.max(0, Math.min(WORLD_WIDTH - 35, p.x + p.vx * dt))
   if (s.layer === "underworks") {
     p.x = Math.max(1270, Math.min(2110, p.x))
     if (!s.lowerWallBroken && p.x > 1810 && p.x < 1870) { p.x = 1810; p.vx = 0 }
-  } else if (!s.wallBroken && p.x > 6108 && p.x < 6182) { p.x = 6108; p.vx = 0 }
+  } else if (s.layer === "oil") {
+    p.x = Math.max(16840, Math.min(18160, p.x))
+  } else if (s.layer === "surface" && !s.wallBroken && p.x > 6108 && p.x < 6182) { p.x = 6108; p.vx = 0 }
+  if (s.layer === "surface" && p.x > 22270 && p.x < 22370) { p.x = 22270; p.vx = 0 }
   if (s.layer === "surface" && p.x > 420 && p.x < 510 && p.y + 42 > 426) { p.x = p.vx < 0 ? 510 : 420; p.vx = 0 }
   p.y += p.vy * dt
   p.grounded = false
   const shaftOpen = s.layer === "surface" && p.x > 1465 && p.x < 1565
-  if (!shaftOpen && p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
-  if (s.layer === "surface") for (const platform of PLATFORMS) {
+  const oilShaftOpen = s.layer === "surface" && p.x > 16830 && p.x < 16930
+  if (!shaftOpen && !oilShaftOpen && p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
+  if (s.layer === "surface" || s.layer === "oil") for (const platform of PLATFORMS) {
     if (p.vy >= 0 && p.x + 28 > platform.x && p.x + 8 < platform.x + platform.w && oldY + 42 <= platform.y + 8 && p.y + 42 >= platform.y) {
       p.y = platform.y - 42; p.vy = 0; p.grounded = true
     }
@@ -270,8 +327,13 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     s.layer = "underworks"; s.cameraY = 0; p.x = 1515; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.grounded = true; s.camera = p.x - VIEW_WIDTH * .42
     if (!s.discoveredRooms.includes("underworks")) s.discoveredRooms.push("underworks")
     setToast(s, "O chão cede sob as placas. Túneis de Ferrugem — camada inferior."); s.savePulse = 2
+  } else if (oilShaftOpen && p.y > GROUND_Y + 245) {
+    s.layer = "oil"; s.cameraY = 0; p.x = 17000; p.y = GROUND_Y - 42; p.vx = 0; p.vy = 0; p.invulnerable = 1.1; p.grounded = true; s.camera = p.x - VIEW_WIDTH * .42
+    if (!s.discoveredRooms.includes("oil-depths")) s.discoveredRooms.push("oil-depths")
+    if (!s.discoveredRooms.includes("area:10")) s.discoveredRooms.push("area:10")
+    setToast(s, "A queda atravessa o piso da cidade. Profundezas do Óleo — camada submersa."); s.savePulse = 2
   }
-  if (s.layer === "underworks" && p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
+  if ((s.layer === "underworks" || s.layer === "oil") && p.y + 42 >= GROUND_Y) { p.y = GROUND_Y - 42; p.vy = 0; p.grounded = true }
   p.pogoCooldown = Math.max(0, p.pogoCooldown - dt)
   if (p.jumpBuffer > 0 && (p.grounded || p.coyoteTime > 0) && !scripted) {
     p.sitting = false; p.vy = -560; p.grounded = false; p.coyoteTime = 0; p.jumpBuffer = 0
@@ -290,7 +352,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   s.camera += (targetCamera - s.camera) * Math.min(1, dt * 5)
 
   for (const enemy of s.enemies) {
-    if ((s.layer === "underworks" && enemy.id !== 3) || scripted || !enemy.alive) continue
+    if ((s.layer === "underworks" && enemy.id !== 3) || (s.layer === "oil" && (enemy.id < 25 || enemy.id > 27)) || scripted || !enemy.alive) continue
     enemy.phase += dt
     enemy.hurtTimer = Math.max(0, (enemy.hurtTimer ?? 0) - dt)
     enemy.hitFlash = Math.max(0, (enemy.hitFlash ?? 0) - dt)
@@ -306,7 +368,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     const attackActive = p.attackPhase === "active"
     if (attackActive && enemy.hitBy !== p.attackId && isInsideAttack(p, enemy.x, enemy.y)) {
       const strongHit = p.comboStep === 3
-      const overcharged = strongHit && s.equippedModules.includes("sobrecharge") && p.energy >= coreCapacity(s)
+      const overcharged = strongHit && s.equippedModules.includes("sobrecharge") && p.energy >= getCoreCapacity(s)
       const damage = (s.upgrades.includes("blade") ? 2 : 1) + (strongHit ? 1 : 0) + (overcharged ? 1 : 0)
       if (overcharged) p.energy -= 1
       enemy.hitBy = p.attackId
@@ -316,7 +378,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
       enemy.vx = (p.attackDirection === "left" ? -1 : p.attackDirection === "right" ? 1 : p.facing) * (strongHit ? 290 : 205)
       enemy.knockY = p.attackDirection === "down" ? 0 : p.attackDirection === "up" ? -150 : enemy.knockY ?? 0
       enemy.phase += .7
-      p.energy = Math.min(coreCapacity(s), p.energy + .08)
+      p.energy = Math.min(getCoreCapacity(s), p.energy + .08)
       if (p.attackDirection === "down" && !p.grounded && p.pogoCooldown <= 0) {
         p.vy = s.equippedModules.includes("impulso") ? -490 : -380
         p.grounded = false
@@ -325,7 +387,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
       s.hitStop = Math.max(s.hitStop, strongHit ? .065 : .04)
       s.cameraShake = Math.max(s.cameraShake, strongHit ? 3.2 : 1.2)
       addSparks(s, enemy.x, enemy.y, strongHit)
-      if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(coreCapacity(s), p.energy + .35) }
+      if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(getCoreCapacity(s), p.energy + .35) }
     }
     if (Math.abs(enemy.x - (p.x + 18)) < 35 && Math.abs(enemy.y - (p.y + 21)) < 48 && p.invulnerable <= 0 && p.dash <= 0) {
       p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; p.vx = Math.sign(p.x - enemy.x || -p.facing) * 260; p.vy = -270
@@ -341,21 +403,44 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     else setToast(s, `A chapa vibra. ${3 - s.lowerWallHits} impactos ainda podem abrir a passagem.`)
   }
 
+  s.projectiles = s.projectiles.filter((projectile) => {
+    projectile.x += projectile.vx * dt; projectile.life -= dt
+    for (const enemy of s.enemies) {
+      if ((s.layer === "underworks" && enemy.id !== 3) || (s.layer === "oil" && (enemy.id < 25 || enemy.id > 27)) || !enemy.alive || Math.abs(enemy.x - projectile.x) > 22 || Math.abs(enemy.y - projectile.y) > 34) continue
+      enemy.hp -= 2; enemy.hurtTimer = .2; enemy.hitFlash = .2; enemy.vx = Math.sign(projectile.vx) * 230
+      addSparks(s, enemy.x, enemy.y, true)
+      if (enemy.hp <= 0) { enemy.alive = false; p.screws += enemy.kind === "soldier" ? 5 : 2; p.energy = Math.min(getCoreCapacity(s), p.energy + .3) }
+      return false
+    }
+    const boss = s.boss
+    if (boss.alive && Math.abs(boss.x - projectile.x) < 74 && Math.abs((GROUND_Y - 100) - projectile.y) < 100 && (boss.stage < 4 || boss.weakWindow > 0)) {
+      boss.hp -= 2; boss.hitBy = -1; addSparks(s, boss.x, GROUND_Y - 100, true); s.cameraShake = Math.max(s.cameraShake, 2)
+      return false
+    }
+    return projectile.life > 0 && projectile.x > 0 && projectile.x < WORLD_WIDTH
+  })
+
   if (s.layer === "surface" && !s.bossWon && p.x > 5110 && !scripted) {
-    const b = s.boss
-    b.timer -= dt; b.phase += dt
-    if (!b.secondPhase && b.hp <= b.maxHp / 2) { b.secondPhase = true; setToast(s, "O núcleo vermelho se abre. A Fornalha ainda não terminou."); s.savePulse = 2 }
-    if (b.timer <= 0) { b.attack = (["slam", "charge", "shards"] as const)[Math.floor((b.phase * 2.4) % 3)]; b.timer = (b.attack === "charge" ? 2.1 : 2.8) * (b.secondPhase ? .72 : 1) }
+  const b = s.boss
+  b.timer -= dt; b.phase += dt; b.weakWindow = Math.max(0, b.weakWindow - dt)
+  const nextStage = b.hp <= b.maxHp * .25 ? 4 : b.hp <= b.maxHp * .5 ? 3 : b.hp <= b.maxHp * .75 ? 2 : 1
+  if (nextStage !== b.stage) {
+    b.stage = nextStage; b.secondPhase = b.stage >= 3
+    setToast(s, b.stage === 4 ? "FASE IV · A armadura cede. Acerte o núcleo quando ele se abrir." : b.stage === 3 ? "FASE III · O Colosso perde placas e acelera." : "FASE II · As tubulações da arena entram em pressão.")
+    s.cameraShake = Math.max(s.cameraShake, 4); s.savePulse = 2
+  }
+  if (b.timer <= 0) { b.attack = (["slam", "charge", "shards"] as const)[Math.floor((b.phase * 2.4) % 3)]; b.timer = (b.attack === "charge" ? 2.1 : 2.8) * (1 - (b.stage - 1) * .12) }
+  if (b.stage === 4 && b.timer < .24 && b.timer > 0) b.weakWindow = .55
     if (b.attack === "charge" && b.timer <= 1.35 && b.timer > .28) b.x += Math.sign(p.x - b.x) * (b.secondPhase ? 340 : 270) * dt
     if (b.attack === "charge" && b.timer < .28 && Math.abs(b.x - p.x) < 120 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; p.vy = -330; p.vx = Math.sign(p.x - b.x || -p.facing) * 300; addSparks(s, p.x + 18, p.y + 22) }
     if (b.attack === "slam" && b.timer < 0.4 && Math.abs(b.x - p.x) < 110 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; p.vy = -300; p.vx = Math.sign(p.x - b.x || -p.facing) * 240; addSparks(s, p.x + 18, p.y + 22) }
     if (b.attack === "shards" && b.timer < 0.25 && Math.abs(b.x - p.x) < 260 && p.invulnerable <= 0) { p.hp -= 1; p.invulnerable = .72; p.hurtFlash = .28; addSparks(s, p.x + 18, p.y + 22) }
-    if (p.attackPhase === "active" && b.hitBy !== p.attackId && isInsideAttack(p, b.x, GROUND_Y - 100)) {
+    if (p.attackPhase === "active" && b.hitBy !== p.attackId && (b.stage < 4 || b.weakWindow > 0) && isInsideAttack(p, b.x, GROUND_Y - 100)) {
       const strongHit = p.comboStep === 3
-      const overcharged = strongHit && s.equippedModules.includes("sobrecharge") && p.energy >= coreCapacity(s)
+      const overcharged = strongHit && s.equippedModules.includes("sobrecharge") && p.energy >= getCoreCapacity(s)
       const damage = (s.upgrades.includes("blade") ? 2 : 1) + (strongHit ? 1 : 0) + (overcharged ? 1 : 0)
       if (overcharged) p.energy -= 1
-      b.hitBy = p.attackId; b.hp -= damage; p.energy = Math.min(coreCapacity(s), p.energy + .18)
+      b.hitBy = p.attackId; b.hp -= damage; p.energy = Math.min(getCoreCapacity(s), p.energy + .18)
       s.hitStop = Math.max(s.hitStop, p.comboStep === 3 ? .07 : .045); s.cameraShake = Math.max(s.cameraShake, p.comboStep === 3 ? 4 : 1.5)
       addSparks(s, b.x, GROUND_Y - 100, p.comboStep === 3)
     }
@@ -363,6 +448,14 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
     if (p.hp <= 0 && s.deathTimer <= 0) { s.deathTimer = .78; p.sitting = false; p.vx = 0; p.vy = -180; p.attack = 0; p.screws = Math.max(0, p.screws - 5); setToast(s, "As peças de Caco se soltam. O Marco ainda lembra.") }
   }
 
+  const fragmentSites = [12450, 15180, 19800]
+  for (const [index, fragmentX] of fragmentSites.entries()) {
+    if (!s.foundCoreFragments.includes(index) && Math.abs(p.x - fragmentX) < 38 && p.y < GROUND_Y - 58) {
+      s.foundCoreFragments.push(index); s.coreFragments += 1; p.energy = Math.min(getCoreCapacity(s), p.energy + 1)
+      setToast(s, `Fragmento de Núcleo ${s.coreFragments}/3 recuperado${s.coreFragments === 3 ? " · capacidade ampliada" : ""}.`); s.savePulse = 2
+      if (!s.discoveredRooms.includes(`core-fragment:${index}`)) s.discoveredRooms.push(`core-fragment:${index}`)
+    }
+  }
   if (!s.foundGreen && p.x > 6200 && p.x < 6340) { s.foundGreen = true; setToast(s, "Uma folha verde entre as placas. O ar mudou."); s.savePulse = 2 }
   if (!s.forestEntered && p.x > 8700) { s.forestEntered = true; s.forestMoment = 3.8; unlockModules(s, ["raiz"]); p.vx = 0; p.vy = 0; s.toast = ""; s.toastTimer = 0; s.savePulse = 2 }
   if (s.forestEntered && p.x > 8870 && !s.flowerBloomed) { s.flowerBloomed = true; s.upgrades.push("Broto de Sucata"); s.savePulse = 2 }
@@ -373,7 +466,7 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
   if (p.x > 4570 && p.x < 4660 && p.y >= GROUND_Y - 80 && s.checkpoint < 4600) { s.checkpoint = 4600; s.savePulse = 2; setToast(s, "Marco da Fornalha ativado — progresso salvo.") }
   if (p.x > 7040 && p.x < 7160 && p.y >= GROUND_Y - 80 && s.checkpoint < 7100) { s.checkpoint = 7100; s.savePulse = 2; setToast(s, "Marco das Raízes ativado. O vento guarda seu caminho.") }
   if (p.x > 8790 && p.x < 8910 && p.y >= GROUND_Y - 80 && s.checkpoint < 8850) { s.checkpoint = 8850; s.savePulse = 2; setToast(s, "Marco da Superfície ativado. A floresta guarda seu caminho.") }
-  if (s.bossWon && p.x > 5700 && !s.foundGreen) setToast(s, "Além da Fornalha: siga o ar mais fresco para leste.")
+  if (s.bossWon && p.x > 5700 && !s.foundGreen) showTutorial(s, "beyond-forge", "Além da Fornalha: siga o ar mais fresco para leste.")
   if (p.x > 5700 && !s.bossWon) p.x = 5700
   if (s.bossWon && p.x > 7400 && p.x < 7670 && !s.recoveryAwakened && s.tutorialHintTimer <= 0 && s.time < 900) {
     if (!s.tutorialSeen.includes("pulse-react")) showTutorial(s, "pulse-react", "O Núcleo reage.")
@@ -392,6 +485,11 @@ export function tickGame(s: GameState, keys: Set<string>, dt: number) {
 export function interact(s: GameState) {
   if (s.dialogue) { s.dialogue.index += 1; if (s.dialogue.index >= s.dialogue.lines.length) s.dialogue = null; return }
   const x = s.player.x
+  if (s.layer === "oil") {
+    const exitX = Math.abs(x - 17000) < 105 ? 16400 : Math.abs(x - 18020) < 105 ? 18250 : 0
+    if (exitX) { s.layer = "surface"; s.player.x = exitX; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; s.player.invulnerable = 1.1; s.camera = Math.max(0, exitX - VIEW_WIDTH * .42); setToast(s, "O elevador sobe da cidade submersa à superfície."); s.savePulse = 2; return }
+    setToast(s, "As placas da cidade abafam o som. Procure um elevador de pressão."); return
+  }
   if (s.layer === "underworks") {
     if (Math.abs(x - 1515) < 95) { s.layer = "surface"; s.player.x = 1500; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; setToast(s, "A escada de serviço devolve Caco à superfície."); s.savePulse = 2; return }
     if (s.lowerWallBroken && Math.abs(x - 1885) < 38 && !s.tunnelMemoryFound) { s.tunnelMemoryFound = true; s.player.screws += 6; setToast(s, "Memória recuperada: alguém marcou a descida antes de a soterrar."); s.savePulse = 2; return }
@@ -399,6 +497,34 @@ export function interact(s: GameState) {
     if (s.relayActivated && Math.abs(x - 2060) < 68) { s.layer = "surface"; s.player.x = 4400; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; s.camera = 4400 - VIEW_WIDTH * .42; if (!s.discoveredRooms.includes("area:3")) s.discoveredRooms.push("area:3"); setToast(s, "O elevador emerge no Cemitério de Motores. A passagem agora conecta regiões."); s.savePulse = 2; return }
     setToast(s, "O som da água some atrás da chapa."); return
   }
+  const pressureLiftEntry = Math.abs(x - 16400) < 92 ? 17000 : Math.abs(x - 18250) < 92 ? 18020 : 0
+  if (pressureLiftEntry) {
+    s.layer = "oil"; s.player.x = pressureLiftEntry; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; s.player.invulnerable = 1.1; s.player.grounded = true; s.camera = pressureLiftEntry - VIEW_WIDTH * .42
+    if (!s.discoveredRooms.includes("oil-depths")) s.discoveredRooms.push("oil-depths")
+    if (!s.discoveredRooms.includes("area:10")) s.discoveredRooms.push("area:10")
+    setToast(s, "Elevador de pressão desce à Cidade Submersa."); s.savePulse = 2; return
+  }
+  if (Math.abs(x - 14150) < 92) {
+    if (!s.richShortcut) { s.richShortcut = true; setToast(s, "Trilho reativado. Um elevador conecta o Mercado à Vila dos Pregos."); s.savePulse = 2 }
+    else { s.player.x = 2180; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; s.camera = Math.max(0, 2180 - VIEW_WIDTH * .42); setToast(s, "O elevador dourado desce até a Vila dos Pregos.") }
+    return
+  }
+  if (s.richShortcut && Math.abs(x - 2180) < 72) { s.player.x = 14150; s.player.y = GROUND_Y - 42; s.player.vx = 0; s.player.vy = 0; s.camera = 14150 - VIEW_WIDTH * .42; setToast(s, "O elevador retorna ao Mercado de Peças."); return }
+  const puzzleSites = [11730, 12050, 12360]
+  const puzzleIndex = puzzleSites.findIndex((site) => Math.abs(x - site) < 70)
+  if (puzzleIndex >= 0) {
+    const sequence = [2, 0, 1]
+    if (s.forgePuzzleNodes.length < sequence.length && puzzleIndex === sequence[s.forgePuzzleNodes.length]) {
+      s.forgePuzzleNodes.push(puzzleIndex)
+      if (s.forgePuzzleNodes.length === sequence.length) {
+        unlockModules(s, ["lancador"]); s.player.moduleCharges = 3; s.player.energy = Math.max(s.player.energy, 1)
+        setToast(s, "As bigornas respondem em sequência. LANÇADOR DE SUCATA encontrado."); s.savePulse = 2
+      } else setToast(s, `Ressonador ${s.forgePuzzleNodes.length}/3 sincronizado. Siga as marcas no metal.`)
+    } else { s.forgePuzzleNodes = []; setToast(s, "A sequência reinicia. Observe os três símbolos gravados nas bigornas.") }
+    return
+  }
+  if (Math.abs(x - 14860) < 95) { s.dialogue = { name: "MESTRA BRONZE · MERCADO DE PEÇAS", index: 0, lines: ["Aqui, até a ferrugem paga aluguel.", "Os fundidores guardam registros do Projeto Scrapbound no subsolo.", "Não confie em quem disser que Caco é só mais uma peça."] }; return }
+  if (Math.abs(x - 15550) < 100) { s.dialogue = { name: "ARQUIVISTA DO BAIRRO ANTIGO", index: 0, lines: ["Os humanos construíram uma cidade sob esta cidade.", "O Ferreiro sabe o nome do primeiro molde.", "A escotilha dourada leva ao óleo. A água lá embaixo não é água."] }; return }
   if (x > 7750 && x < 8010) {
     if (!s.recoveryAwakened) { setToast(s, "O terminal está sem energia. A máquina do reservatório pode responder ao Núcleo."); return }
     if (!s.projectRevealed) { s.projectRevealed = true; s.storyStage = 1; s.savePulse = 2 }
@@ -411,7 +537,7 @@ export function interact(s: GameState) {
     return
   }
   if (s.shortcut && Math.abs(x - 2180) < 70) { s.player.x = 4380; s.player.y = GROUND_Y - 42; s.player.vx = 0; setToast(s, "Atalho da Vila para o Cemitério."); return }
-  if (s.checkpoint > 0 && Math.abs(x - s.checkpoint) < 55) { s.player.hp = s.player.maxHp; s.player.energy = s.upgrades.includes("core") ? 4 : 3; s.player.x = s.checkpoint; s.player.vx = 0; s.player.vy = 0; s.player.sitting = true; setToast(s, "Caco se senta no Marco. Vida e energia recuperadas; progresso salvo."); s.savePulse = 2 }
+  if (s.checkpoint > 0 && Math.abs(x - s.checkpoint) < 55) { s.player.hp = s.player.maxHp; s.player.energy = getCoreCapacity(s); s.player.x = s.checkpoint; s.player.vx = 0; s.player.vy = 0; s.player.sitting = true; setToast(s, "Caco se senta no Marco. Vida e energia recuperadas; progresso salvo."); s.savePulse = 2 }
   else if (Math.abs(x - 2320) < 100) s.dialogue = { name: "VELHO PARAFUSO", index: 0, lines: ["A oficina do Ferreiro já foi uma catedral de verdade.", "Dizem que ele escuta o que as máquinas sonham.", "Eu? Só escuto minhas juntas reclamando."] }
   else if (Math.abs(x - 2550) < 115) s.dialogue = { name: "LATA · MECÂNICA", index: 0, lines: ["Você acordou falando com os parafusos, hein? Isso é bom sinal.", "Tenho peças úteis. Um favor: não pergunte de onde vieram.", "Escolha uma melhoria na bancada ao lado. E cuidado com o Ferreiro."] , shop: true }
   else if (Math.abs(x - 2750) < 95) s.dialogue = { name: "SUCATA PEQUENA", index: 0, lines: ["Você já viu o lado de cima?", "Minha mãe diz que o vento vem de lá.", "Um dia vou subir até descobrir se ela está certa."] }
@@ -422,7 +548,7 @@ export function interact(s: GameState) {
   else if (Math.abs(x - 8370) < 145 && s.storyStage === 2) { s.storyStage = 3; s.savePulse = 2; setToast(s, "MISSÃO PRINCIPAL · DESCUBRA POR QUE CACO FOI CRIADO."); s.dialogue = { name: "FERRÃO · À DISTÂNCIA", index: 0, lines: ["Então você viu.", "Você sabia?", "Eu sabia que havia algo.", "O que é o Projeto Scrapbound?", "Essa é a pergunta errada. Pergunte por que fizeram você."] } }
   else if (Math.abs(x - 6540) < 160 && s.foundGreen) s.dialogue = { name: "O JARDINEIRO", index: 0, lines: ["Não toque na flor. Ela levou séculos para confiar no escuro.", "O mundo não morreu, pequeno Caco. Só aprendeu a se esconder.", "A raiz conhece o caminho para a luz. E você também."] }
   else if (Math.abs(x - 5480) < 180 && s.bossWon) s.dialogue = { name: "O FERREIRO · DEPOIS DA FORNALHA", index: 0, lines: ["Esse pulso... eu o enterrei antes de você nascer.", "Você não foi montado aqui, Caco. Foi devolvido.", "A Fornalha guarda a primeira lembrança. E a última mentira."] }
-  else if (s.checkpoint > 0 && Math.abs(x - s.checkpoint) < 80) { s.player.hp = s.player.maxHp; s.player.energy = s.upgrades.includes("core") ? 4 : 3; s.player.sitting = true; setToast(s, "Caco descansa no Marco. Vida e energia recuperadas.") }
+  else if (s.checkpoint > 0 && Math.abs(x - s.checkpoint) < 80) { s.player.hp = s.player.maxHp; s.player.energy = getCoreCapacity(s); s.player.sitting = true; setToast(s, "Caco descansa no Marco. Vida e energia recuperadas.") }
   else setToast(s, "Só o vento passando pelos canos.")
 }
 
@@ -433,13 +559,69 @@ export function buyUpgrade(s: GameState, id: string) {
   if (s.player.screws < item.cost) return setToast(s, `Faltam parafusos. Custa ${item.cost}.`)
   s.player.screws -= item.cost; s.upgrades.push(id)
   if (id === "shell") { s.player.maxHp += 1; s.player.hp += 1 }
-  if (id === "core") { s.player.energy = 4; s.moduleSlots = Math.max(s.moduleSlots, 3); setToast(s, "Núcleo ampliado. Capacidade de energia e um slot de módulo adicionados.") }
+  if (id === "core") { s.player.energy = getCoreCapacity(s); s.moduleSlots = Math.max(s.moduleSlots, 3); setToast(s, "Núcleo ampliado. Capacidade de energia e um slot de módulo adicionados.") }
   setToast(s, `${item.label} instalada.`)
 }
 
 function rounded(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill() }
 function blendColor(a: string, b: string, amount: number) { const t = Math.max(0, Math.min(1, amount)); const parse = (value: string) => [1, 3, 5].map((index) => Number.parseInt(value.slice(index, index + 2), 16)); const from = parse(a), to = parse(b); return `rgb(${from.map((value, index) => Math.round(value + (to[index] - value) * t)).join(",")})` }
 function polygon(ctx: CanvasRenderingContext2D, points: [number, number][], fill: string, stroke = "#201e1a") { ctx.beginPath(); ctx.moveTo(points[0][0], points[0][1]); for (const [x, y] of points.slice(1)) ctx.lineTo(x, y); ctx.closePath(); ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke() } }
+
+function drawExpansionBiome(ctx: CanvasRenderingContext2D, areaIndex: number, cam: number, time: number) {
+  if (areaIndex < 8) return
+  const area = AREAS[areaIndex]
+  const palettes = [
+    { structure: "#302b26", trim: "#9c593a", light: "#e77b3b" },
+    { structure: "#38352c", trim: "#a88b52", light: "#f2cc7a" },
+    { structure: "#1d2b2b", trim: "#56746a", light: "#83b49a" },
+    { structure: "#20232c", trim: "#5d6272", light: "#91a4b8" },
+    { structure: "#2e272c", trim: "#89705b", light: "#d3a37a" },
+  ]
+  const palette = palettes[areaIndex - 8]
+  for (let worldX = area.start - 300, index = 0; worldX < area.end + 300; worldX += 255, index++) {
+    const x = worldX - cam * .36
+    if (x < -170 || x > VIEW_WIDTH + 170) continue
+    const height = 95 + ((index * 71 + areaIndex * 29) % 185)
+    const width = 88 + (index % 3) * 28
+    ctx.fillStyle = palette.structure
+    ctx.fillRect(x, 426 - height, width, height + 24)
+    ctx.fillStyle = palette.trim
+    ctx.fillRect(x - 4, 422 - height, width + 8, 5)
+    ctx.fillRect(x + 10, 422 - height + 18, 3, height - 20)
+    for (let row = 0; row < 3; row++) {
+      ctx.fillStyle = index % 4 === 0 ? palette.light : "#121817"
+      ctx.globalAlpha = index % 4 === 0 ? .62 + Math.sin(time * 2 + index + row) * .08 : .8
+      ctx.fillRect(x + 20 + (row % 2) * 27, 440 - height + row * 33, 12, 8)
+    }
+    ctx.globalAlpha = 1
+    if (areaIndex === 8 || areaIndex === 10) {
+      ctx.strokeStyle = palette.trim; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(x + width, 365 - (index % 3) * 36); ctx.lineTo(x + width + 42, 365 - (index % 3) * 36); ctx.lineTo(x + width + 42, 422); ctx.stroke()
+      if (areaIndex === 8) { ctx.fillStyle = "rgba(235,103,46,.28)"; ctx.fillRect(x + 18, 420 - height, width - 36, 7) }
+    }
+  }
+  if (areaIndex === 10) {
+    ctx.fillStyle = "rgba(14,48,47,.72)"; ctx.fillRect(area.start - cam, 427, area.end - area.start, 29)
+    ctx.strokeStyle = "rgba(118,177,154,.46)"; ctx.lineWidth = 2
+    ctx.beginPath(); ctx.moveTo(0, 432 + Math.sin(time * 1.5) * 3); ctx.bezierCurveTo(220, 421, 390, 443, 610, 430); ctx.bezierCurveTo(750, 419, 850, 443, 960, 429); ctx.stroke()
+  }
+  for (let roomX = area.start + 128; roomX < area.end; roomX += 270) {
+    const x = roomX - cam
+    if (x < -130 || x > VIEW_WIDTH + 130) continue
+    ctx.fillStyle = palette.light; ctx.globalAlpha = .7; ctx.font = "7px monospace"; ctx.textAlign = "center"
+    ctx.fillText(getSubarea(roomX) ?? "", x, 280 + Math.sin(time + roomX) * 1.5)
+    ctx.globalAlpha = 1
+  }
+}
+
+function drawAncientGate(ctx: CanvasRenderingContext2D, x: number, time: number) {
+  ctx.fillStyle = "#111316"; ctx.fillRect(x - 62, 246, 124, 212)
+  ctx.fillStyle = "#514940"; ctx.fillRect(x - 62, 246, 124, 10); ctx.fillRect(x - 62, 246, 9, 212); ctx.fillRect(x + 53, 246, 9, 212)
+  ctx.fillStyle = "#342b2d"; ctx.fillRect(x - 47, 260, 94, 198)
+  ctx.strokeStyle = "#8e735e"; ctx.lineWidth = 3; ctx.strokeRect(x - 41, 267, 82, 184)
+  ctx.strokeStyle = "#b0644e"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, 274); ctx.lineTo(x, 444); ctx.moveTo(x - 28, 330); ctx.lineTo(x + 28, 330); ctx.moveTo(x - 28, 385); ctx.lineTo(x + 28, 385); ctx.stroke()
+  ctx.fillStyle = "#d59c6e"; ctx.shadowColor = "#d66f4a"; ctx.shadowBlur = 12 + Math.sin(time * 2) * 3; ctx.beginPath(); ctx.arc(x, 360, 7, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0
+  ctx.fillStyle = "#e2d0b5"; ctx.font = "8px monospace"; ctx.textAlign = "center"; ctx.fillText("PORTÃO LACRADO", x, 226); ctx.fillStyle = "#aaa18f"; ctx.fillText("FREQUÊNCIA MAGNÉTICA AUSENTE", x, 238)
+}
 
 export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: number, height: number) {
   if (!Array.isArray(s.particles)) s.particles = []
@@ -452,7 +634,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   const cam = s.camera
   const area = getArea(s.player.x)
   const green = s.foundGreen
-  const forestBlend = Math.max(0, Math.min(1, (s.player.x - 8350) / 1450))
+  const forestBlend = Math.min(Math.max(0, Math.min(1, (s.player.x - 8350) / 650)), Math.max(0, Math.min(1, (11100 - s.player.x) / 650)))
   const bg = ctx.createLinearGradient(0, 0, 0, VIEW_HEIGHT)
   bg.addColorStop(0, blendColor("#11191b", "#b8c79b", forestBlend * (s.forestEntered ? .58 : .28)))
   bg.addColorStop(.62, blendColor(area.tint, "#17412e", forestBlend))
@@ -468,11 +650,12 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
     ctx.fillStyle = "#505048"; ctx.fillRect(x + 12, 420 - h + 20, 3, h - 8)
     if (i % 4 === 0) { ctx.fillStyle = "#b45d35"; ctx.globalAlpha = 0.28; ctx.fillRect(x + 38, 420 - h + 32, 8, 5); ctx.globalAlpha = 1 }
   }
+  drawExpansionBiome(ctx, AREAS.indexOf(area), cam, s.time)
   // Bruma atmosférica e manchas de luz.
   for (let i = 0; i < 8; i++) { const x = ((i * 157 + s.time * (8 + i) - cam * 0.12) % 1100) - 70; ctx.fillStyle = `rgba(150,145,125,${0.025 + (i % 3) * 0.012})`; ctx.beginPath(); ctx.ellipse(x, 230 + (i % 4) * 54, 115, 26, 0, 0, Math.PI * 2); ctx.fill() }
   if (green && s.player.x > 3500) { const glow = ctx.createRadialGradient(515 - (cam % 340), 350, 5, 515 - (cam % 340), 350, 250); glow.addColorStop(0, "rgba(132,191,114,.15)"); glow.addColorStop(1, "rgba(132,191,114,0)"); ctx.fillStyle = glow; ctx.fillRect(250, 120, 530, 350) }
-  if (s.player.x > 5700) {
-      const visibility = Math.max(0, Math.min(1, (s.player.x - 8500) / 700))
+  if (s.player.x > 5700 && s.player.x < 11300) {
+      const visibility = Math.min(Math.max(0, Math.min(1, (s.player.x - 8500) / 700)), Math.max(0, Math.min(1, (11300 - s.player.x) / 650)))
 
     for (let i = 0; i < 14; i++) {
       const wx = 5840 + i * 215, x = wx - cam * .88, h = 150 + (i * 47 % 190)
@@ -500,8 +683,24 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   // Piso metálico em placas.
   ctx.fillStyle = blendColor("#252625", "#1d3929", forestBlend); ctx.fillRect(0, GROUND_Y, VIEW_WIDTH, VIEW_HEIGHT - GROUND_Y)
   for (let x = -((cam % 160)); x < VIEW_WIDTH; x += 160) { ctx.fillStyle = blendColor("#37352f", "#315337", forestBlend); ctx.fillRect(x, GROUND_Y + 2, 156, 5); ctx.fillStyle = blendColor("#72654f", "#8ca45f", forestBlend); ctx.beginPath(); ctx.arc(x + 8, GROUND_Y + 15, 2, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(x + 148, GROUND_Y + 15, 2, 0, Math.PI * 2); ctx.fill() }
-  if (s.layer === "surface") for (const platform of PLATFORMS) { const x = platform.x - cam; if (x < -250 || x > VIEW_WIDTH + 200) continue; ctx.fillStyle = "#302f2a"; ctx.fillRect(x, platform.y, platform.w, 13); ctx.fillStyle = "#827053"; ctx.fillRect(x, platform.y, platform.w, 3); ctx.fillStyle = "#51493d"; for (let b = 12; b < platform.w; b += 38) ctx.fillRect(x + b, platform.y + 4, 3, 7) }
+  if (s.layer === "surface" || s.layer === "oil") for (const platform of PLATFORMS) { const x = platform.x - cam; if (x < -250 || x > VIEW_WIDTH + 200) continue; ctx.fillStyle = "#302f2a"; ctx.fillRect(x, platform.y, platform.w, 13); ctx.fillStyle = "#827053"; ctx.fillRect(x, platform.y, platform.w, 3); ctx.fillStyle = "#51493d"; for (let b = 12; b < platform.w; b += 38) ctx.fillRect(x + b, platform.y + 4, 3, 7) }
+  if (s.layer === "surface" && s.player.x > 16750 && s.player.x < 17000) { const shaftX = 16880 - cam; ctx.fillStyle = "#080d0d"; ctx.fillRect(shaftX - 62, GROUND_Y, 124, 96); ctx.strokeStyle = "#7f8d75"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(shaftX - 62, GROUND_Y + 2); ctx.lineTo(shaftX - 30, GROUND_Y + 10); ctx.moveTo(shaftX + 62, GROUND_Y + 2); ctx.lineTo(shaftX + 30, GROUND_Y + 10); ctx.stroke(); ctx.fillStyle = "#c3d1b0"; ctx.font = "8px monospace"; ctx.textAlign = "center"; ctx.fillText("QUEDA PARA O ÓLEO", shaftX, GROUND_Y - 13) }
   if (s.layer === "surface" && s.player.x > 1370 && s.player.x < 1690) { const shaftX = 1515 - cam; const shaft = ctx.createLinearGradient(shaftX - 66, GROUND_Y, shaftX + 66, GROUND_Y + 100); shaft.addColorStop(0, "#080b0b"); shaft.addColorStop(.5, "#111411"); shaft.addColorStop(1, "#080a09"); ctx.fillStyle = shaft; ctx.fillRect(shaftX - 64, GROUND_Y, 128, 90); ctx.strokeStyle = "#75634b"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(shaftX - 64, GROUND_Y + 1); ctx.lineTo(shaftX - 33, GROUND_Y + 9); ctx.moveTo(shaftX + 64, GROUND_Y + 1); ctx.lineTo(shaftX + 33, GROUND_Y + 9); ctx.stroke(); ctx.fillStyle = "rgba(147,177,124,.24)"; ctx.fillRect(shaftX - 11, GROUND_Y + 24, 2, 35); for (let i = 0; i < 4; i++) { const moteX = shaftX + Math.sin(s.time * .8 + i) * 19; const moteY = GROUND_Y - 5 + ((s.time * 17 + i * 15) % 32); ctx.fillStyle = `rgba(184,194,156,${.12 + (i % 2) * .08})`; ctx.fillRect(moteX, moteY, 1.5, 2) } }
+  if (s.layer === "oil") {
+    const water = ctx.createLinearGradient(0, 60, 0, 458); water.addColorStop(0, "rgba(10,28,31,.92)"); water.addColorStop(.62, "rgba(13,43,44,.86)"); water.addColorStop(1, "rgba(19,40,38,.96)"); ctx.fillStyle = water; ctx.fillRect(0, 70, VIEW_WIDTH, 388)
+    for (let i = 0; i < 7; i++) {
+      const x = i * 176 - (cam % 176); const height = 95 + (i * 43 % 155)
+      ctx.fillStyle = i % 2 ? "#1b3030" : "#263737"; ctx.fillRect(x, 415 - height, 80, height)
+      ctx.fillStyle = "#56716a"; ctx.fillRect(x - 4, 412 - height, 88, 5)
+      ctx.fillStyle = "#172526"; ctx.fillRect(x + 15, 430 - height, 20, 34); ctx.fillRect(x + 49, 430 - height, 17, 34)
+    }
+    ctx.strokeStyle = "#617469"; ctx.lineWidth = 9; ctx.beginPath(); ctx.moveTo(0, 137); ctx.lineTo(VIEW_WIDTH, 137); ctx.stroke(); ctx.strokeStyle = "#a1ac86"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 144); ctx.lineTo(VIEW_WIDTH, 144); ctx.stroke()
+    ctx.strokeStyle = "rgba(106,171,147,.48)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 359 + Math.sin(s.time * 1.2) * 3); ctx.bezierCurveTo(260, 349, 420, 368, 650, 356); ctx.bezierCurveTo(790, 349, 870, 365, 960, 355); ctx.stroke()
+    for (let i = 0; i < 12; i++) { const x = (i * 97 + s.time * (8 + i % 4) - cam * .17 + 960) % 960; const y = 145 + (i * 63 + s.time * 8) % 270; ctx.fillStyle = `rgba(161,208,186,${.18 + (i % 3) * .06})`; ctx.beginPath(); ctx.arc(x, y, 1 + i % 3, 0, Math.PI * 2); ctx.fill() }
+    ctx.fillStyle = "#c4d4bc"; ctx.font = "8px monospace"; ctx.textAlign = "center"; ctx.fillText("CIDADE SUBMERSA · PRESSÃO INSTÁVEL", VIEW_WIDTH / 2, 109)
+  }
+  if (s.layer === "oil") { drawElevator(ctx, 17000 - cam, s.time, true); drawElevator(ctx, 18020 - cam, s.time, true) }
+  if (s.layer === "surface" && s.player.x > 16000 && s.player.x < 18600) { drawElevator(ctx, 16400 - cam, s.time, true); drawElevator(ctx, 18250 - cam, s.time, true) }
   if (s.layer === "underworks") {
     const cave = ctx.createLinearGradient(0, 80, 0, GROUND_Y); cave.addColorStop(0, "#0b100f"); cave.addColorStop(.72, "#141916"); cave.addColorStop(1, "#24241e"); ctx.fillStyle = cave; ctx.fillRect(0, 80, VIEW_WIDTH, GROUND_Y - 80)
     for (let i = 0; i < 7; i++) { const x = i * 176 - (cam % 176); ctx.fillStyle = i % 2 ? "#282a24" : "#353127"; polygon(ctx, [[x - 14, 83], [x + 1, 108], [x + 12, 146], [x + 25, 109], [x + 37, 83]], "#282a24", ""); ctx.fillStyle = "#3d382d"; ctx.fillRect(x + 5, 152, 8, GROUND_Y - 152); ctx.fillStyle = "#827451"; ctx.fillRect(x + 4, 152, 2, GROUND_Y - 152) }
@@ -518,12 +717,16 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
   for (const point of [2480, 4600, 7100]) { const x = point - cam; if (x > -60 && x < VIEW_WIDTH + 60) { ctx.fillStyle = "#40392f"; rounded(ctx, x - 17, 408, 34, 50, 5); ctx.fillStyle = s.checkpoint === point ? "#c48b50" : "#758071"; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = s.checkpoint === point ? 16 : 5; ctx.beginPath(); ctx.arc(x, 423, 5, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0; ctx.fillStyle = "#9a8a6d"; ctx.fillRect(x - 24, 454, 48, 5); ctx.fillStyle = "#594d3b"; ctx.fillRect(x - 24, 437, 48, 6); ctx.fillRect(x - 20, 443, 4, 12); ctx.fillRect(x + 16, 443, 4, 12); ctx.fillStyle = "#c9b89b"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("MARCO", x, 397) } }
   if (s.player.x > 4150 && s.player.x < 4570) drawElevator(ctx, 4400 - cam, s.time, s.shortcut)
   if (s.shortcut && s.player.x > 1970 && s.player.x < 2390) drawElevator(ctx, 2180 - cam, s.time, true)
+  if (s.player.x > 13900 && s.player.x < 14400) drawElevator(ctx, 14150 - cam, s.time, s.richShortcut)
+  if (s.player.x > 11500 && s.player.x < 12600) drawForgePuzzle(ctx, cam, s.time, s.forgePuzzleNodes)
+  if (s.richShortcut && s.player.x > 1970 && s.player.x < 2390) drawElevator(ctx, 2180 - cam, s.time, true)
   if (s.player.x > 6050 && !s.wallBroken) drawSealedWall(ctx, 6145 - cam)
   if (s.wallBroken && !s.secretFound) drawMemoryNiche(ctx, 6145 - cam, s.time)
   if (s.player.x > 6800 && s.player.x < 8800) drawRecoveryZone(ctx, cam, s.time, s.recoveryAwakened)
   if (s.player.x > 7300 && s.player.x < 7900) drawPulseMachine(ctx, 7560 - cam, s.time, s.recoveryAwakened)
   if (s.player.x > 7300) drawResearchTerminal(ctx, 7880 - cam, s.time, s.recoveryAwakened)
-  if (s.forestEntered) drawObservationTower(ctx, 10320 - cam, s.time)
+  if (s.forestEntered && s.player.x < 11200) drawObservationTower(ctx, 10320 - cam, s.time)
+  if (s.player.x > 20800) drawAncientGate(ctx, 22320 - cam, s.time)
   const npcs = [
     { x: 2320 + Math.sin(s.time * .7) * 12, label: "VELHO PARAFUSO", role: "old" as const },
     { x: 2550, label: "LATA", role: "lata" as const },
@@ -531,16 +734,21 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
     ...(!s.ferronMet ? [{ x: 2920, label: "FERRÃO", role: "ferron" as const }] : []),
     ...(s.storyStage === 2 ? [{ x: 8370, label: "FERRÃO", role: "ferron" as const }] : []),
     { x: 4700, label: "O FERREIRO", role: "forger" as const },
+    { x: 14860, label: "MESTRA BRONZE", role: "old" as const },
+    { x: 15550, label: "ARQUIVISTA", role: "old" as const },
     ...(green ? [{ x: 6540, label: "O JARDINEIRO", role: "gardener" as const }] : []),
   ]
   for (const npc of npcs) { const x = npc.x - cam; if (x < -160 || x > VIEW_WIDTH + 160) continue; drawNamedCharacter(ctx, x, GROUND_Y - 5, npc.role, s.time); ctx.fillStyle = "#d0c4ad"; ctx.font = "10px monospace"; ctx.textAlign = "center"; ctx.fillText(npc.label, x, npc.role === "forger" ? GROUND_Y - 190 : GROUND_Y - 58); if (Math.abs(s.player.x - npc.x) < (npc.role === "forger" ? 180 : 125)) { ctx.fillStyle = "#f0dfbb"; ctx.font = "11px monospace"; ctx.fillText("[E] falar", x, npc.role === "forger" ? GROUND_Y - 174 : GROUND_Y - 73) } }
   if (s.player.x > 6000) drawTinyFlower(ctx, 6300 - cam, s.time, s.foundGreen)
-  if (s.forestEntered && s.player.x > 8700) drawForestFlora(ctx, cam, s.time, s.foundGreen)
+  if (s.forestEntered && s.player.x > 8700 && s.player.x < 11100) drawForestFlora(ctx, cam, s.time, s.foundGreen)
+  for (const [index, fragmentX] of [12450, 15180, 19800].entries()) if (!s.foundCoreFragments.includes(index)) drawCoreFragment(ctx, fragmentX - cam, s.time)
   if (s.secretFound && s.player.x > 6100 && s.player.x < 6300) { const secretX = 6145 - cam; ctx.fillStyle = "#171c18"; ctx.fillRect(secretX - 32, 378, 64, 77); ctx.fillStyle = "#a7ba77"; ctx.beginPath(); ctx.arc(secretX, 399, 5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#ddd4bb"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("MEMÓRIA 01", secretX, 369) }
+  if (s.layer === "oil") { const promptX = s.player.x - cam + 18; ctx.fillStyle = "#d6e0d0"; ctx.font = "9px monospace"; ctx.textAlign = "center"; if (Math.abs(s.player.x - 17000) < 100 || Math.abs(s.player.x - 18020) < 100) ctx.fillText("[E] ELEVADOR DE PRESSÃO", promptX, GROUND_Y - 68) }
+  if (s.layer === "surface" && (Math.abs(s.player.x - 16400) < 100 || Math.abs(s.player.x - 18250) < 100)) { const promptX = s.player.x - cam + 18; ctx.fillStyle = "#d6e0d0"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("[E] DESCER AO ÓLEO", promptX, GROUND_Y - 68) }
   if (s.layer === "underworks") { const promptX = s.player.x - cam + 18; ctx.fillStyle = "#d6c5a3"; ctx.font = "9px monospace"; ctx.textAlign = "center"; if (Math.abs(s.player.x - 1515) < 85) ctx.fillText("[E] SUBIR", promptX, GROUND_Y - 68); else if (!s.lowerWallBroken && Math.abs(s.player.x - 1810) < 90) ctx.fillText("CHAPA · J", promptX, GROUND_Y - 68); else if (s.lowerWallBroken && Math.abs(s.player.x - 1885) < 48 && !s.tunnelMemoryFound) ctx.fillText("[E] MEMÓRIA", promptX, GROUND_Y - 68); else if (s.lowerWallBroken && Math.abs(s.player.x - 1975) < 70) ctx.fillText(s.relayActivated ? "PULSO ESTÁVEL" : "[K] PULSO", promptX, GROUND_Y - 68); else if (s.relayActivated && Math.abs(s.player.x - 2060) < 74) ctx.fillText("[E] ELEVADOR", promptX, GROUND_Y - 68) }
 
   // Inimigos com silhuetas diferentes.
-  for (const e of s.enemies) { if (!e.alive || (s.layer === "underworks" && e.id !== 3)) continue; const x = e.x - cam; if (x < -80 || x > VIEW_WIDTH + 80) continue; drawEnemy(ctx, e, x, s.time); if (DEBUG_COMBAT) { ctx.strokeStyle = "#65e2c1"; ctx.lineWidth = 1; ctx.strokeRect(x - 23, e.y - 30, 46, 52) } }
+  for (const e of s.enemies) { if (!e.alive || (s.layer === "underworks" && e.id !== 3) || (s.layer === "oil" && (e.id < 25 || e.id > 27))) continue; const x = e.x - cam; if (x < -80 || x > VIEW_WIDTH + 80) continue; drawEnemy(ctx, e, x, s.time); if (DEBUG_COMBAT) { ctx.strokeStyle = "#65e2c1"; ctx.lineWidth = 1; ctx.strokeRect(x - 23, e.y - 30, 46, 52) } }
   // O Colosso prepara ataques com sinais visuais antes de cada impacto.
   if (!s.bossWon && s.player.x > 4950) drawColossus(ctx, s.boss, s.boss.x - cam, s.time)
   const p = s.player, px = p.x - cam, py = p.y
@@ -553,6 +761,13 @@ export function drawGame(ctx: CanvasRenderingContext2D, s: GameState, width: num
     ctx.beginPath(); ctx.arc(31, 0, p.comboStep === 3 ? 43 : 36, -.92, .92); ctx.stroke()
     if (p.comboStep === 3) { ctx.globalAlpha *= .38; ctx.beginPath(); ctx.arc(31, 0, 50, -.72, .72); ctx.stroke() }
     ctx.restore(); ctx.globalAlpha = 1
+  }
+  for (const projectile of s.projectiles) {
+    const x = projectile.x - cam
+    ctx.save(); ctx.translate(x, projectile.y); ctx.rotate(projectile.vx < 0 ? Math.PI : 0)
+    ctx.strokeStyle = "rgba(242,194,119,.58)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-18, 0); ctx.lineTo(-5, 0); ctx.stroke()
+    ctx.shadowColor = "#f4c478"; ctx.shadowBlur = 8; polygon(ctx, [[-5,-3],[1,-5],[8,-2],[8,2],[1,5],[-5,3]], "#c5bda7", "#f4d89c"); ctx.shadowBlur = 0
+    ctx.fillStyle = "#725b3e"; ctx.fillRect(-1, -1, 3, 2); ctx.restore()
   }
   if (p.pulseEffect > 0) {
     const progress = 1 - p.pulseEffect / .42
@@ -681,10 +896,10 @@ function drawColossus(ctx: CanvasRenderingContext2D, boss: GameState["boss"], x:
   polygon(ctx,[[-52,-106],[45,-110],[49,-73],[29,-38],[-43,-42],[-62,-77]],"#69543d")
   for(let i=0;i<5;i++){ctx.strokeStyle="#98774f";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-45+i*21,-98);ctx.lineTo(-38+i*21,-53);ctx.stroke()}
   ctx.fillStyle="#231c18";ctx.beginPath();ctx.arc(3,-152,21,0,Math.PI*2);ctx.fill();ctx.fillStyle="#d94835";ctx.shadowColor="#ff3e2e";ctx.shadowBlur=24;ctx.beginPath();ctx.arc(3,-152,12,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0
-  ctx.fillStyle="#ef8e4e";ctx.shadowColor="#ff792e";ctx.shadowBlur=15;ctx.beginPath();ctx.arc(-2,-78,8+Math.sin(time*5)*1.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0
+  ctx.fillStyle=boss.stage === 4 && boss.weakWindow > 0 ? "#f3e8a0" : "#ef8e4e";ctx.shadowColor=boss.stage === 4 && boss.weakWindow > 0 ? "#fff3a0" : "#ff792e";ctx.shadowBlur=boss.stage === 4 && boss.weakWindow > 0 ? 25 : 15;ctx.beginPath();ctx.arc(-2,-78,boss.stage === 4 && boss.weakWindow > 0 ? 11 : 8+Math.sin(time*5)*1.5,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0
   for(const [bx,by] of [[-55,-144],[47,-144],[-45,-77],[41,-82]] as [number,number][]) {ctx.fillStyle="#d4b18a";ctx.beginPath();ctx.arc(bx,by,2,0,Math.PI*2);ctx.fill()}
   ctx.restore()
-  ctx.fillStyle="#c9b796";ctx.font="bold 10px monospace";ctx.textAlign="center";ctx.fillText(windup?"!  TELEGRÁFICO  !":boss.attack==="charge"?"INVESTIDA":"COLOSSO DA FORNALHA",0,-265)
+  ctx.fillStyle="#c9b796";ctx.font="bold 10px monospace";ctx.textAlign="center";ctx.fillText(boss.stage === 4 && boss.weakWindow > 0 ? "NÚCLEO EXPOSTO · ATAQUE" : windup ? "!  TELEGRÁFICO  !" : boss.attack === "charge" ? "INVESTIDA" : `FASE ${boss.stage} · COLOSSO DA FORNALHA`,0,-265)
   ctx.restore()
 }
 
@@ -786,9 +1001,30 @@ function drawObservationTower(ctx: CanvasRenderingContext2D, x: number, time: nu
   ctx.fillStyle = "#c3d49a"; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText("TORRE DE OBSERVAÇÃO", x, 111)
   if (Math.sin(time * .4) > .9) { ctx.fillStyle = "#d7e5ae"; ctx.fillRect(x + 46, 235, 4, 4) }
 }
+function drawCoreFragment(ctx: CanvasRenderingContext2D, x: number, time: number) {
+  const y = 286 + Math.sin(time * 2 + x * .01) * 7
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.sin(time + x) * .12)
+  ctx.fillStyle = "rgba(228,177,96,.16)"; ctx.beginPath(); ctx.ellipse(0, 0, 23, 24, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.shadowColor = "#f1c477"; ctx.shadowBlur = 15; polygon(ctx, [[0,-15],[9,-3],[6,12],[0,17],[-8,8],[-7,-6]], "#d7b477", "#fff0b5"); ctx.shadowBlur = 0
+  ctx.fillStyle = "#fff0b5"; ctx.fillRect(-1, -7, 2, 12); ctx.restore()
+}
+
+function drawForgePuzzle(ctx: CanvasRenderingContext2D, cam: number, time: number, sequence: number[]) {
+  const sites = [11730, 12050, 12360]
+  for (const [index, worldX] of sites.entries()) {
+    const x = worldX - cam
+    if (x < -60 || x > VIEW_WIDTH + 60) continue
+    ctx.fillStyle = "#292720"; ctx.fillRect(x - 27, 422, 54, 36)
+    ctx.strokeStyle = sequence.includes(index) ? "#dba35f" : "#78674b"; ctx.lineWidth = 2; ctx.strokeRect(x - 25, 420, 50, 37)
+    ctx.fillStyle = sequence.includes(index) ? "#f0c678" : "#8d7858"; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = sequence.includes(index) ? 12 : 3
+    ctx.beginPath(); ctx.arc(x, 407, 7 + Math.sin(time * 2 + index) * 1, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0
+    ctx.fillStyle = "#d9c9a8"; ctx.font = "8px monospace"; ctx.textAlign = "center"; ctx.fillText(["II", "III", "I"][index], x, 390); ctx.fillText("[E] SINTONIZAR", x, 475)
+  }
+}
+
 function drawTinyFlower(ctx: CanvasRenderingContext2D, x: number, time: number, discovered: boolean) { if (!discovered) return; ctx.strokeStyle="#6c884f";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,457);ctx.quadraticCurveTo(x-4,447,x+Math.sin(time*1.4)*2,435);ctx.stroke();ctx.fillStyle="#a4c277";polygon(ctx,[[x,449],[x-8,443],[x-1,441]],"#7da05a","");ctx.fillStyle="#dccc91";ctx.shadowColor="#d5e49b";ctx.shadowBlur=11;for(let i=0;i<5;i++){const angle=i*Math.PI*.4;ctx.beginPath();ctx.ellipse(x+Math.cos(angle)*4,435+Math.sin(angle)*4,3,2,angle,0,Math.PI*2);ctx.fill()}ctx.fillStyle="#e8bd63";ctx.beginPath();ctx.arc(x,435,2,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0 }
 function drawForestFlora(ctx: CanvasRenderingContext2D, cam: number, time: number, foundGreen: boolean) { for(let i=0;i<9;i++){const x=8920+i*146-cam;ctx.strokeStyle=i%2?"#557844":"#7c9652";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,458);ctx.quadraticCurveTo(x-7,446,x+Math.sin(time+i)*4,431-(i%3)*7);ctx.stroke();polygon(ctx,[[x,441],[x-9,434],[x-2,433]],"#749b5b","");if(i===2&&foundGreen){ctx.fillStyle="#e4c988";ctx.shadowColor="#d9e9a5";ctx.shadowBlur=9;ctx.beginPath();ctx.arc(x,429,4,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0}} }
-export function saveableState(s: GameState): Partial<GameState> { return { player: { ...s.player, hp: Math.max(1, s.player.hp), vx: 0, vy: 0, sitting: s.player.sitting, attack: 0, dash: 0 }, enemies: s.enemies, boss: s.boss, checkpoint: s.checkpoint, foundGreen: s.foundGreen, forestEntered: s.forestEntered, vistaSeen: s.vistaSeen, flowerBloomed: s.flowerBloomed, projectRevealed: s.projectRevealed, projectCutsceneSeen: s.projectCutsceneSeen, storyStage: s.storyStage, introSeen: s.introSeen, recoveryAwakened: s.recoveryAwakened, tutorialSeen: s.tutorialSeen, secretFound: s.secretFound, wallBroken: s.wallBroken, shortcut: s.shortcut, bossWon: s.bossWon, ferronMet: s.ferronMet, upgrades: s.upgrades, layer: s.layer, lowerWallHits: s.lowerWallHits, lowerWallHitBy: s.lowerWallHitBy, lowerWallBroken: s.lowerWallBroken, relayActivated: s.relayActivated, tunnelMemoryFound: s.tunnelMemoryFound, discoveredRooms: s.discoveredRooms } }
+export function saveableState(s: GameState): Partial<GameState> { return { player: { ...s.player, hp: Math.max(1, s.player.hp), vx: 0, vy: 0, sitting: s.player.sitting, attack: 0, dash: 0 }, enemies: s.enemies, projectiles: [], boss: s.boss, checkpoint: s.checkpoint, foundGreen: s.foundGreen, forestEntered: s.forestEntered, vistaSeen: s.vistaSeen, flowerBloomed: s.flowerBloomed, projectRevealed: s.projectRevealed, projectCutsceneSeen: s.projectCutsceneSeen, storyStage: s.storyStage, introSeen: s.introSeen, recoveryAwakened: s.recoveryAwakened, tutorialSeen: s.tutorialSeen, secretFound: s.secretFound, wallBroken: s.wallBroken, shortcut: s.shortcut, richShortcut: s.richShortcut, forgePuzzleNodes: s.forgePuzzleNodes, foundCoreFragments: s.foundCoreFragments, coreFragments: s.coreFragments, bossWon: s.bossWon, ferronMet: s.ferronMet, upgrades: s.upgrades, unlockedModules: s.unlockedModules, equippedModules: s.equippedModules, moduleSlots: s.moduleSlots, layer: s.layer, lowerWallHits: s.lowerWallHits, lowerWallHitBy: s.lowerWallHitBy, lowerWallBroken: s.lowerWallBroken, relayActivated: s.relayActivated, tunnelMemoryFound: s.tunnelMemoryFound, discoveredRooms: s.discoveredRooms } }
 export function loadSavedState(): Partial<GameState> | undefined { try { const data = localStorage.getItem("scrapbound-save"); return data ? JSON.parse(data) as Partial<GameState> : undefined } catch { return undefined } }
 export function persistState(s: GameState) { try { localStorage.setItem("scrapbound-save", JSON.stringify(saveableState(s))) } catch { /* armazenamento pode estar indisponível no modo privado */ } }
 export function resetSave() { try { localStorage.removeItem("scrapbound-save") } catch { /* armazenamento opcional */ } }

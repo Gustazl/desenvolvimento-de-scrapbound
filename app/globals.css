@@ -284,6 +284,8 @@
   .pulse-button { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; padding: 4px 6px; border: 1px solid #96764f; background: #33291d; color: #e9c38a; font: 8px monospace; letter-spacing: .08em; cursor: pointer; }
   .pulse-button kbd { padding: 2px 3px; border: 1px solid #7f694a; color: #f3e4c4; font: 8px monospace; }
   .pulse-button:disabled { opacity: .45; cursor: not-allowed; }
+.power-button { border-color: #a49c80; background: linear-gradient(135deg, #37372f, #292821); color: #e3d7b6; }
+.power-button kbd { border-color: #92896d; color: #fff1c3; }
   .mobile-aim { display: none; }
   .core-module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 14px 0; }
   .core-module-card { min-height: 104px; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 11px; border: 1px solid #51483a; background: linear-gradient(135deg, #292921, #20211d); color: #ddd1b8; text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
